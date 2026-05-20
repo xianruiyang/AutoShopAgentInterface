@@ -24,6 +24,7 @@ go test ./...
 - `st lint/parse/refs/instruction`
 - `config init/get/set/profile`
 - `var export/system list`
+- `var table list/info/export/import --dry-run` 和表级二进制替换用例
 - `comm serial/ethernet show`
 - `trace add/list/export`
 - `target/online/monitor/comm/motion/build` 的 simulator JSON

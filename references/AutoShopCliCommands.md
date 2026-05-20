@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe` v0.4.0。
+适用版本：`autoshop-agent.exe` v0.5.0。
 
 可执行文件：
 
@@ -15,6 +15,7 @@ scripts/autoshop-agent.exe
 - 默认后端为 `simulator`。涉及 PLC、在线监控、通讯扫描、运动控制和构建交付的命令会执行并保存模拟状态或生成模拟文件，但不会连接、扫描、运行、停止、下载、上传或写入真实 PLC。
 - 显式指定 `--backend hardware` 时，当前版本会拒绝执行并提示硬件后端尚未实现。
 - `.ST` 写回只支持既有 POU 容器。`pou add/remove/rename` 只输出结构化计划，不修改 AutoShop 工程元数据。
+- `var table` 支持系统变量表、结构体、软元件表、功能块实例和变量表的表级内容操作：列出、查看信息、原始/JSON/HEX/Base64 导出、带校验和备份的导入替换、按工程树路径刷新窗口。当前版本不逐行反序列化这些私有二进制表。
 - 外部写回后，AutoShop 已打开的编辑窗口不会自动刷新。需要执行 `ui refresh --program <name>` 或在 `pou import` 时加 `--refresh`。
 - `project backup` 会读取工程文件。如果 AutoShop 独占锁定 `.hcp` 等文件，备份可能失败，应关闭 AutoShop 或对离线副本操作。
 
@@ -142,9 +143,35 @@ autoshop-agent.exe var import --project <dir> --in vars.csv|vars.json [--merge|-
 autoshop-agent.exe var bind --project <dir> --name <var> --device D100
 autoshop-agent.exe var validate --project <dir>
 autoshop-agent.exe var system list --project <dir> [--group ethernet|com|can|ecat|motion|info]
+autoshop-agent.exe var system show --project <dir> --name _SYS_COM
+autoshop-agent.exe var system export --project <dir> --name _SYS_COM --out _SYS_COM.svt
+autoshop-agent.exe var system import --project <dir> --name _SYS_COM --in _SYS_COM.svt [--dry-run] [--allow-open-project] [--refresh]
+autoshop-agent.exe var system refresh --project <dir> --name _SYS_COM
+autoshop-agent.exe var table list --project <dir> [--category system|global|internal|all] [--all]
+autoshop-agent.exe var table info --project <dir> --name variable|device|struct|fb-instance|_SYS_COM
+autoshop-agent.exe var table export --project <dir> --name variable --out 变量表.gvt [--as binary|json|hex|base64]
+autoshop-agent.exe var table import --project <dir> --name variable --in 变量表.gvt [--dry-run] [--allow-open-project] [--no-backup] [--refresh]
+autoshop-agent.exe var table refresh --project <dir> --name variable
 ```
 
 `var import/bind` 在默认后端中写入 simulator 状态，不修改 AutoShop 变量表。
+
+`var table` 名称映射：
+
+```text
+系统变量表/_SYS_CAN          -> _SYS_CAN.svt
+系统变量表/_SYS_COM          -> _SYS_COM.svt
+系统变量表/_SYS_COM_SAVE     -> _SYS_COM_SAVE.svt
+系统变量表/_SYS_ECAT_MASTER  -> _SYS_ECAT_MASTER.svt
+系统变量表/_SYS_ECAT_SLAVE   -> _SYS_ECAT_SLAVE.svt
+系统变量表/_SYS_ETHERNET     -> _SYS_ETHERNET.svt
+系统变量表/_SYS_INFO         -> _SYS_INFO.svt
+系统变量表/_SYS_PN           -> _SYS_PN.svt
+全局变量/结构体              -> VarList.gdt
+全局变量/软元件表            -> ElemBitComm.gdtx
+全局变量/功能块实例          -> 功能块实例.fbi
+全局变量/变量表              -> 变量表.gvt
+```
 
 ## `build`
 
@@ -279,13 +306,15 @@ autoshop-agent.exe motion hsc add --project <dir> --name Counter1 --mode linear|
 ```powershell
 autoshop-agent.exe ui windows
 autoshop-agent.exe ui refresh --program MAIN
+autoshop-agent.exe ui refresh-path --path "全局变量/变量表" --title 变量表
 autoshop-agent.exe ui close --program MAIN
 autoshop-agent.exe ui open --program MAIN
+autoshop-agent.exe ui open-path --path "系统变量表/_SYS_COM" --title _SYS_COM
 autoshop-agent.exe ui focus --program MAIN
 autoshop-agent.exe ui tree --format json
 ```
 
-UI 命令查找正在运行的 AutoShop 进程，不依赖固定安装目录。CLI 不自动处理未保存缓冲区弹窗。
+UI 命令查找正在运行的 AutoShop 进程，不依赖固定安装目录。`open-path/refresh-path` 可操作工程树中的非 POU 节点。CLI 不自动处理未保存缓冲区弹窗。
 
 ## `doc`
 

@@ -23,6 +23,7 @@ scripts/autoshop-agent.exe
 - `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 已有默认 `simulator` 后端实现，可执行并产出结构化状态或文件；不会扫描网段、连接 USB、RUN/STOP 真实 PLC、下载真实设备或写真实设备。
 - 如显式指定 `--backend hardware`，当前版本会拒绝并提示硬件后端尚未实现；真机接入应复用同一命令接口。
 - 写回 `.ST` 容器只支持既有程序文件；不要用 CLI 新增、删除或重命名 POU，除非后续已经明确工程元数据格式。
+- `var table` 可对 AutoShop 工程树里的系统变量表、结构体、软元件表、功能块实例和变量表做表级内容操作：列出、信息、导出、导入替换和刷新。当前版本不逐行解析或改写这些私有二进制表。
 - 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；需要用 `ui refresh --program <name>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。
 
 ## 常用命令
@@ -93,7 +94,18 @@ LiteST 文本分析：
 .\scripts\autoshop-agent.exe project archive pack --project D:\program\PLC\project001-copy --out D:\tmp\project.agent.zip
 .\scripts\autoshop-agent.exe var export --project D:\program\PLC\project001 --out D:\tmp\vars.json
 .\scripts\autoshop-agent.exe var system list --project D:\program\PLC\project001 --format json
+.\scripts\autoshop-agent.exe var table list --project D:\program\PLC\project001 --format json
+.\scripts\autoshop-agent.exe var table export --project D:\program\PLC\project001 --name variable --out D:\tmp\变量表.gvt
+.\scripts\autoshop-agent.exe var table import --project D:\program\PLC\project001 --name variable --in D:\tmp\变量表.gvt --dry-run --format json
 .\scripts\autoshop-agent.exe comm serial show --project D:\program\PLC\project001 --format json
+```
+
+刷新变量表、软元件表、功能块实例或系统变量表窗口：
+
+```powershell
+.\scripts\autoshop-agent.exe var table refresh --project D:\program\PLC\project001 --name variable
+.\scripts\autoshop-agent.exe ui refresh-path --path "全局变量/软元件表" --title 软元件表
+.\scripts\autoshop-agent.exe ui open-path --path "系统变量表/_SYS_COM" --title _SYS_COM
 ```
 
 Trace 本地侧车定义，不启动 PLC 采样：
