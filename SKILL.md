@@ -19,7 +19,7 @@ scripts/autoshop-agent.exe
 
 ## 能力边界
 
-- 当前版本面向无 PLC 真机环境，默认只做本地文件、LiteST 文本、AutoShop UI 窗口操作和安全的侧车文件。
+- 当前版本面向无 PLC 真机环境，默认只做本地文件、LiteST 文本、AutoShop UI 窗口操作、静默窗口截图和安全的侧车文件。
 - `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 已有默认 `simulator` 后端实现，可执行并产出结构化状态或文件；不会扫描网段、连接 USB、RUN/STOP 真实 PLC、下载真实设备或写真实设备。
 - 如显式指定 `--backend hardware`，当前版本会拒绝并提示硬件后端尚未实现；真机接入应复用同一命令接口。
 - 文件编辑主流程只用 `workspace export` 和 `workspace apply`。先导出成按 AutoShop 工程树排布的文件夹，再修改文件夹，最后应用回工程。
@@ -28,6 +28,7 @@ scripts/autoshop-agent.exe
 - 配置、监控表、交叉引用表、元件使用表等私有二进制内容导出为 JSON 包装文件；全局变量表 `变量表.gvt` 会额外导出 `globalVariableRows`，对应最后一个 `CLVTItem` 内部的真实变量行数组。当前采样格式中 `STRING<128>` 等 `dataType` 尾部必须保持在最后一行；新增 BOOL 等普通变量时插在这些行之前。
 - `pou`、`var table`、`project node` 保留为底层/兼容命令；正常文件编辑优先使用 workspace。
 - 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；需要用 `workspace apply --refresh`、`ui refresh --program <name>`、`ui refresh-path --path <tree-path>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。
+- `ui screenshot` 使用 Win32 `PrintWindow` 按窗口句柄输出 PNG，不会把 AutoShop 切到前台。目标窗口最小化时使用 `--restore-offscreen`：CLI 会把 AutoShop 临时恢复到虚拟屏幕右下角几乎屏幕外，截图后若原来是最小化则立即最小化回去。
 
 ## 常用命令
 
@@ -91,6 +92,17 @@ scripts/autoshop-agent.exe
 .\scripts\autoshop-agent.exe ui windows --format json
 .\scripts\autoshop-agent.exe ui tree --format json
 ```
+
+静默截取 AutoShop 主窗口或已打开的 MDI 子窗口：
+
+```powershell
+.\scripts\autoshop-agent.exe ui screenshot --out D:\tmp\autoshop.png --format json
+.\scripts\autoshop-agent.exe ui screenshot --title 变量表 --out D:\tmp\变量表.png --format json
+.\scripts\autoshop-agent.exe ui screenshot --program MAIN --out D:\tmp\MAIN.png --client --format json
+.\scripts\autoshop-agent.exe ui screenshot --title 变量表 --restore-offscreen --out D:\tmp\变量表.png --format json
+```
+
+截图 JSON 里检查 `nonBlank=true` 和 `uniqueProbe` 大于 `1`。如果 `minimized=true` 且 `offscreen=true`，表示 CLI 从最小化状态临时移到屏幕边缘完成了截图，并已按原状态最小化回去。
 
 LiteST 文本分析：
 

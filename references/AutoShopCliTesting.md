@@ -29,6 +29,7 @@ go test ./...
 - `var export/system list`
 - `var table list/info/export/import --dry-run` 和表级二进制替换用例
 - `comm serial/ethernet show`
+- `ui screenshot` 的窗口句柄解析单元测试；真实 AutoShop 截图需在窗口未最小化时手动 smoke
 - `trace add/list/export`
 - `target/online/monitor/comm/motion/build` 的 simulator JSON
 - `target/online/monitor/comm/motion/build` 的 simulator 后端执行结果，要求 `implemented=true` 且 `safe=true`

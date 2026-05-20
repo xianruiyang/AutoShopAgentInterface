@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：autoshop-agent.exe v0.8.5。
+适用版本：autoshop-agent.exe v0.8.6。
 
 本文只记录当前 CLI 的使用方式、能力边界和安全约束，不记录开发计划。
 
@@ -14,6 +14,7 @@
 - 配置、监控、交叉引用、元件使用表等私有二进制内容会以 JSON 包装文件导出，字段包含来源、SHA 和 contentBase64。全局变量/变量表/变量表.gvt 会额外导出 semanticType=global-variable-table-v5.03 和 globalVariableRows，可通过 JSON 编辑最后一个 CLVTItem 内部的真实变量行数组。当前采样格式只支持带 dataType 的类型尾部挂在最后一行；添加 BOOL 等普通变量时，应插入到 STRING<128> 等带 dataType 的行之前，CLI 会拒绝把带 dataType 的行写在中间。
 - var table、project node、pou 等细粒度命令保留为底层/兼容命令；正常文件编辑优先使用 workspace export/apply。
 - 外部写回后，AutoShop 已打开的编辑窗口不会自动刷新。需要执行 ui refresh --program <name>、ui refresh-path --path <tree-path>，或在 workspace apply / pou import 时加 --refresh。
+- ui screenshot 使用 Win32 PrintWindow 按窗口句柄输出 PNG，不会把 AutoShop 切到前台。目标窗口最小化时可传入 --restore-offscreen：CLI 会把 AutoShop 临时恢复到虚拟屏幕右下角几乎屏幕外，截图后若原来是最小化则立即最小化回去。若传入 --allow-minimized，输出可能为空白，JSON 中的 nonBlank/uniqueProbe 可用于快速判断。
 
 ## 通用格式
 
@@ -206,6 +207,11 @@
     autoshop-agent.exe ui open-path --path "系统变量表/_SYS_COM" --title _SYS_COM
     autoshop-agent.exe ui focus --program MAIN
     autoshop-agent.exe ui tree --format json
+    autoshop-agent.exe ui screenshot --out autoshop.png
+    autoshop-agent.exe ui screenshot --title 变量表 --out var-table.png --format json
+    autoshop-agent.exe ui screenshot --program MAIN --out main-editor.png --client
+    autoshop-agent.exe ui screenshot --title 变量表 --restore-offscreen --out var-table.png --format json
+    autoshop-agent.exe ui screenshot --title 变量表 --out diagnostic.png --allow-minimized
 
 ### doc
 
