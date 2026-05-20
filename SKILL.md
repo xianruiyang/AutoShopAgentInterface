@@ -1,6 +1,6 @@
 ---
 name: autoshop-agent-interface
-description: "当 Codex 需要通过随包 CLI 操作汇川 Inovance AutoShop Lite ST 工程时使用：检查工程、列出/导出/写回既有 ST 程序容器、分析 LiteST 文本、查询本地指令资料摘要、查看或刷新 AutoShop POU 窗口。当前 CLI 支持无 PLC 真机的离线开发流程；target、online、monitor、comm、motion 等真实设备相关命令只做安全占位，不会连接或修改 PLC。"
+description: "当 Codex 需要通过随包 CLI 操作汇川 Inovance AutoShop Lite ST 工程时使用：检查工程、列出/导出/写回既有 ST 程序容器、分析 LiteST 文本、查询本地指令资料摘要、查看或刷新 AutoShop POU 窗口。当前 CLI 支持无 PLC 真机的离线开发流程；target、online、monitor、comm、motion 等真实设备相关命令默认使用 simulator 后端，不会连接或修改 PLC。"
 ---
 
 # AutoShop Agent Interface
@@ -104,7 +104,7 @@ Trace 本地侧车定义，不启动 PLC 采样：
 .\scripts\autoshop-agent.exe trace export --project D:\program\PLC\project001-copy --name bench --out D:\tmp\trace.csv
 ```
 
-无 PLC 安全占位示例：
+无 PLC simulator 后端示例：
 
 ```powershell
 .\scripts\autoshop-agent.exe target scan --format json
@@ -187,10 +187,10 @@ references/AutoShopLiteStFormat.md
 references/AutoShopUiRefresh.md
 ```
 
-扩展命令集前，先读：
+查询完整 CLI 指令前，先读：
 
 ```text
-references/AutoShopCliCommandSetDesign.md
+references/AutoShopCliCommands.md
 ```
 
 维护或运行测试前，先读：

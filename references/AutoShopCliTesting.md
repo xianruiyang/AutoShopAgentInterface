@@ -26,7 +26,7 @@ go test ./...
 - `var export/system list`
 - `comm serial/ethernet show`
 - `trace add/list/export`
-- `target/online/monitor/comm/motion/build` 的安全占位 JSON
+- `target/online/monitor/comm/motion/build` 的 simulator JSON
 - `target/online/monitor/comm/motion/build` 的 simulator 后端执行结果，要求 `implemented=true` 且 `safe=true`
 
 ## 真机调试用例
