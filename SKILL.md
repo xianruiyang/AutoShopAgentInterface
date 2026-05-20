@@ -99,3 +99,5 @@ Relevant JSON fields:
 Read `references/AutoShopLiteStFormat.md` before changing writeback behavior.
 
 Read `references/AutoShopUiRefresh.md` before changing or troubleshooting window refresh behavior.
+
+Read `references/AutoShopCliCommandSetDesign.md` before expanding the CLI beyond the currently implemented ST import/export and UI refresh commands.
