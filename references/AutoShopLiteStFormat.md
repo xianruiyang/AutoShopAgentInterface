@@ -22,7 +22,7 @@ CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容
 
 - 功能块文件使用 `.FB` 扩展名，`folder.txt` 的 `FB` 区登记 `FILE <name>.FB`，`.hcp` 中登记 `FileType=81`、`ProgType=7`、`POUID=-1`。
 - 函数文件使用 `.FC` 扩展名，`folder.txt` 的 `FC` 区登记 `FILE <name>.FC`，`.hcp` 中登记 `FileType=82`、`ProgType=8`、`POUID=-1`。
-- `.FB/.FC` 文件都是两个连续的 `AutoShop` 私有容器。第一个容器的最后一个 `CLVTItem` 对象在 17 字节对象前缀后保存 POU 名称；第二个容器保存空 LiteST 代码体。
+- `.FB/.FC` 文件都是两个连续的 `AutoShop` 私有容器。第一个容器的最后一个 `CLVTItem` 对象在 17 字节对象前缀后保存 POU 名称；第二个容器保存 LiteST 代码体。第二个容器不带 `CLVTItem` 字符串，但仍可按 ST 容器的最终 `CString` 源码块读写。
 - FB/FC 新增能力通过 `workspace apply` 的 JSON/文本镜像流程使用：在 `编程/功能块(FB)` 或 `编程/函数(FC)` 下新增 `*.pou.json`，CLI 会从 `.FB/.FC` 模板生成并替换内部名称，不能创建 `.ST` 后放入 `FB`/`FC` 区。
 
 之前错误生成的 `FB_ASAI_001.ST`、`FC_ASAI_001.ST` 是孤立错误文件；AutoShop 会从可见 `folder.txt` 树中移除它们，`.hcp` 中可能留下空 `FileName` 的旧登记。
