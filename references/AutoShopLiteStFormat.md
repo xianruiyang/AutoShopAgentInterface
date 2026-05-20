@@ -29,7 +29,48 @@ CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容
 
 `workspace apply` 会根据 `variables` 重建 `.gvt` 内部变量行数组，并复用当前工程 `.gvt` 作为模板。用户不要直接编辑 `.gvt`，也不要为变量表伪造 `contentBase64`。
 
-当前已采样的 `STRING<128>` 格式把显式 `dataType` 保存为最后一个变量记录之后的尾部字符串，而不是记录内部字段。因此编辑 `variables` 时必须让 `STRING<128>` 等尾部 `dataType` 行保持最后；新增 BOOL 等普通变量应插入到它之前。CLI 会在 dry-run/apply 阶段拒绝把尾部 `dataType` 行写在中间，以避免 AutoShop 重新打开后变量表读空。
+已按用户样本验证的变量类型码：
+
+- `BOOL=1`
+- `INT=4`
+- `DINT=16`
+- `REAL=32`
+- `STRUCT/系统结构/系统联合/自定义结构体=64`
+- `ARRAY=128`
+- `STRING/STRING<...>=2048`
+- `IP=4096`
+- `BYTE=8192`
+
+显式类型扩展按记录解析，不依赖行位置：
+
+- `STRING<...>`：MFC `CString(dataType)` + 4 字节小端 `2048`。
+- `ARRAY`：MFC `CString(arrayTypeText)` + 4 字节小端 `128` + 4 字节元素类型码 + 4 字节数组长度；当前样本中 `BOOL[0..2]` 导出为 `arrayElementDataType=BOOL`、`arrayLength=3`。
+- 结构体/系统结构/系统联合：MFC `CString(dataType)`，当前样本中后面不跟额外类型码；例如 `_sMC_CAMIN`、`Stru`、`Stru_1`。
+
+未采到 POINTER 的可写样本，因此当前文档不声明 POINTER 的语义写回支持。
+
+## 自定义结构体样本
+
+`全局变量/结构体/*.stru` 已按用户创建的 `Stru`、`Stru_1` 样本验证。`workspace export` 会导出：
+
+- `format: "autoshop-agent-struct-definition.v1"`
+- `kind: "struct-definition"`
+- `semanticType: "struct-definition-v5.03"`
+- `definition.name`
+- `definition.members`
+
+成员记录支持基础类型和结构体类型。成员名字段在当前样本中带 1 个结尾 `00` 字节，写回时 CLI 会保留该结构。
+
+## 功能块实例样本
+
+`全局变量/功能块实例/功能块实例.fbi` 已按用户创建的 `TRIG.F_TRIG` 与 `TRIG.R_TRIG` 实例验证。`workspace export` 会导出：
+
+- `format: "autoshop-agent-fb-instance-table.v1"`
+- `kind: "fb-instance-table"`
+- `semanticType: "fb-instance-table-v5.03"`
+- `instances`
+
+`.fbi` 文件包含两个连续 AutoShop 容器；第一个容器保存实例行，第二个容器按原样保留。写回时 CLI 只重建第一个容器的实例数组，并保留未解析尾部容器。
 
 ## 编码
 
@@ -46,11 +87,14 @@ CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容
 - 列出现有 `*.ST` 程序容器。
 - 导出内嵌 ST 源码。
 - 将 txt 写回既有 `*.ST` 容器。
+- 将 `变量表.gvt.json` 的 `variables` 写回全局变量表。
+- 将 `*.stru.json` 的 `definition.members` 写回自定义结构体定义。
+- 将 `功能块实例.fbi.json` 的 `instances` 写回功能块实例表。
 
 未支持：
 
 - 新建或删除 POU 节点。
 - 编辑 `.hcp` 工程表。
-- 语义化编辑硬件配置、交叉引用数据，或未采样确认的其它私有变量表格式。
+- 语义化编辑硬件配置、交叉引用数据，或未采样确认的其它私有表格式。
 
 写回默认创建备份。只有显式传入 `--no-backup` 时才跳过备份。

@@ -25,7 +25,8 @@ scripts/autoshop-agent.exe
 - 文件编辑主流程只用 `workspace export` 和 `workspace apply`。先导出成按 AutoShop 工程树排布的文件夹，再修改文件夹，最后应用回工程。
 - `workspace apply` 写回后会自动回读工程文件并校验 SHA；JSON 输出里应检查 `verified=true` 和 `readBackSha256`。
 - 写回 `.ST` 容器只支持既有程序文件；workspace 里的 `编程/程序块/*.st.txt` 会替换对应 `.ST` 容器中的 LiteST 文本块。
-- 配置、监控表、交叉引用表、元件使用表等未解析的私有二进制内容导出为 JSON 包装文件；全局变量表 `变量表.gvt` 若能识别，会导出为专用语义 JSON，`variables` 是可直接编辑的变量数组。当前采样格式中 `STRING<128>` 等尾部 `dataType` 行必须保持在最后；新增 BOOL 等普通变量时插在这些行之前。
+- 配置、监控表、交叉引用表、元件使用表等未解析的私有二进制内容导出为 JSON 包装文件；全局变量表 `变量表.gvt` 若能识别，会导出为专用语义 JSON，`variables` 是可直接编辑的变量数组。`STRING<128>`、结构体、数组等带显式 `dataType` 的变量由 CLI 写入记录扩展，可以在 `variables` 中按需要排序。
+- `全局变量/结构体/*.stru.json` 的 `definition.members` 可编辑自定义结构体成员；`全局变量/功能块实例/功能块实例.fbi.json` 的 `instances` 可编辑功能块实例。两者都通过 `workspace apply` 重建 AutoShop 私有二进制文件。
 - `pou`、`var table`、`project node` 保留为底层/兼容命令；正常文件编辑优先使用 workspace。
 - 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；需要用 `workspace apply --refresh`、`ui refresh --program <name>`、`ui refresh-path --path <tree-path>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。
 - `ui screenshot` 使用 Win32 `PrintWindow` 按窗口句柄输出 PNG，不会把 AutoShop 切到前台。目标窗口最小化时使用 `--restore-offscreen`：CLI 会把 AutoShop 临时恢复到虚拟屏幕右下角几乎屏幕外，截图后若原来是最小化则立即最小化回去。
@@ -40,7 +41,7 @@ scripts/autoshop-agent.exe
 .\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\tmp\project001-workspace --allow-open-project --refresh
 ```
 
-全局变量表位于 `全局变量/变量表/变量表.gvt.json`，优先编辑其中的 `variables` 数组，不要手工编辑 `.gvt` 或伪造 `contentBase64`。若已有 `STRING<128>` 等尾部 `dataType` 行，保持该行最后；CLI 会拒绝把尾部 `dataType` 行写到中间。
+全局变量表位于 `全局变量/变量表/变量表.gvt.json`，优先编辑其中的 `variables` 数组，不要手工编辑 `.gvt` 或伪造 `contentBase64`。已按当前样本验证 BOOL、BYTE、INT、DINT、REAL、ARRAY、IP、STRING/STRING<...>、自定义结构体和以 _s/_u 开头的系统结构/联合类型。
 
 检查工程和 ST 容器：
 
