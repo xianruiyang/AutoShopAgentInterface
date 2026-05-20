@@ -19,6 +19,7 @@ go test ./...
 覆盖范围：
 
 - ST 容器导出/写回 round-trip
+- `workspace export/apply`：导出工程镜像文件夹，修改 `编程/程序块/MAIN.st.txt`，dry-run 后应用回 `.ST` 容器
 - `project check/info/archive pack/archive unpack`
 - `project node list/info/export/import --dry-run`，包含 `program`、`config`、`variable` 等分类
 - `pou list/export/import --dry-run/add/remove/rename`

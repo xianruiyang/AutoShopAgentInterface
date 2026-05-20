@@ -1,6 +1,6 @@
 ---
 name: autoshop-agent-interface
-description: "当 Codex 需要通过随包 CLI 操作汇川 Inovance AutoShop Lite ST 工程时使用：检查工程、列出/导出/写回既有 ST 程序容器、分析 LiteST 文本、查询本地指令资料摘要、查看或刷新 AutoShop POU 窗口。当前 CLI 支持无 PLC 真机的离线开发流程；target、online、monitor、comm、motion 等真实设备相关命令默认使用 simulator 后端，不会连接或修改 PLC。"
+description: "当 Codex 需要通过随包 CLI 操作汇川 Inovance AutoShop Lite ST 工程时使用：把工程导出成按 AutoShop 工程树排布的可编辑 workspace 文件夹、修改后应用回工程、检查工程、分析 LiteST 文本、查询本地指令资料摘要、查看或刷新 AutoShop 窗口。当前 CLI 支持无 PLC 真机的离线开发流程；target、online、monitor、comm、motion 等真实设备相关命令默认使用 simulator 后端，不会连接或修改 PLC。"
 ---
 
 # AutoShop Agent Interface
@@ -22,12 +22,21 @@ scripts/autoshop-agent.exe
 - 当前版本面向无 PLC 真机环境，默认只做本地文件、LiteST 文本、AutoShop UI 窗口操作和安全的侧车文件。
 - `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 已有默认 `simulator` 后端实现，可执行并产出结构化状态或文件；不会扫描网段、连接 USB、RUN/STOP 真实 PLC、下载真实设备或写真实设备。
 - 如显式指定 `--backend hardware`，当前版本会拒绝并提示硬件后端尚未实现；真机接入应复用同一命令接口。
-- 写回 `.ST` 容器只支持既有程序文件；不要用 CLI 新增、删除或重命名 POU，除非后续已经明确工程元数据格式。
-- `var table` 可对 AutoShop 工程树里的系统变量表、结构体、软元件表、功能块实例和变量表做表级内容操作：列出、信息、导出、导入替换和刷新。当前版本不逐行解析或改写这些私有二进制表。
-- `project node` 可对 AutoShop 工程树里的编程、配置、变量表、监控表、交叉引用表、元件使用表和 Trace 节点做表级内容操作。当前版本不逐字段解析这些私有二进制配置文件。
+- 文件编辑主流程只用 `workspace export` 和 `workspace apply`。先导出成按 AutoShop 工程树排布的文件夹，再修改文件夹，最后应用回工程。
+- 写回 `.ST` 容器只支持既有程序文件；workspace 里的 `编程/程序块/*.st.txt` 会替换对应 `.ST` 容器中的 LiteST 文本块。
+- 配置、变量表、监控表、交叉引用表、元件使用表等私有二进制内容导出为 JSON 包装文件；当前版本不逐行解析或伪造这些私有二进制字段。
+- `pou`、`var table`、`project node` 保留为底层/兼容命令；正常文件编辑优先使用 workspace。
 - 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；需要用 `ui refresh --program <name>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。
 
 ## 常用命令
+
+导出工程 workspace，修改后应用回工程：
+
+```powershell
+.\scripts\autoshop-agent.exe workspace export --project D:\program\PLC\project001 --out D:\tmp\project001-workspace --force
+.\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\tmp\project001-workspace --dry-run --format json
+.\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\tmp\project001-workspace --allow-open-project --refresh
+```
 
 检查工程和 ST 容器：
 

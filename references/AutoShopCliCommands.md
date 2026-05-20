@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe` v0.7.0。
+适用版本：`autoshop-agent.exe` v0.8.0。
 
 可执行文件：
 
@@ -14,9 +14,10 @@ scripts/autoshop-agent.exe
 
 - 默认后端为 `simulator`。涉及 PLC、在线监控、通讯扫描、运动控制和构建交付的命令会执行并保存模拟状态或生成模拟文件，但不会连接、扫描、运行、停止、下载、上传或写入真实 PLC。
 - 显式指定 `--backend hardware` 时，当前版本会拒绝执行并提示硬件后端尚未实现。
-- `.ST` 写回只支持既有 POU 容器。`pou add/remove/rename` 只输出结构化计划，不修改 AutoShop 工程元数据。
-- `var table` 支持系统变量表、结构体、软元件表、功能块实例和变量表的表级内容操作：列出、查看信息、原始/JSON/HEX/Base64 导出、带校验和备份的导入替换、按工程树路径刷新窗口。当前版本不逐行反序列化这些私有二进制表。
-- `project node` 支持编程、配置、变量表、监控、交叉引用、元件使用表和 Trace 等工程树节点的表级内容操作。一个节点对应多个工程文件时，默认用 ZIP 导出/导入。
+- 文件编辑主流程是 `workspace export` 和 `workspace apply`：先把 AutoShop 工程按软件工程树导出成一个可编辑文件夹，修改文件夹里的 `.st.txt` 或 JSON，再统一应用回工程。
+- `.ST` 写回只支持既有 POU 容器。工作区里的 `编程/程序块/*.st.txt` 会写回对应 `.ST` 容器的 LiteST 文本块。
+- 配置、变量表、监控、交叉引用、元件使用表等私有二进制内容会以 JSON 包装文件导出，字段包含来源、SHA 和 `contentBase64`。当前版本不逐行反序列化这些私有二进制表。
+- `var table`、`project node`、`pou` 等细粒度命令保留为底层/兼容命令；正常文件编辑优先使用 `workspace export/apply`。
 - 外部写回后，AutoShop 已打开的编辑窗口不会自动刷新。需要执行 `ui refresh --program <name>` 或在 `pou import` 时加 `--refresh`。
 - `project backup` 会读取工程文件。如果 AutoShop 独占锁定 `.hcp` 等文件，备份可能失败，应关闭 AutoShop 或对离线副本操作。
 
@@ -81,6 +82,40 @@ autoshop-agent.exe config profile remove <name>
 ```
 
 用户机器相关路径、UI 文本和连接配置都应写入 JSON 配置，不写死安装路径。
+
+## `workspace`
+
+工程文件编辑主入口。只需要两个指令：
+
+```powershell
+autoshop-agent.exe workspace export --project <dir> --out <workspace-dir> [--force]
+autoshop-agent.exe workspace apply --project <dir> --in <workspace-dir> [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh]
+```
+
+导出的文件夹按 AutoShop 左侧工程树排布，例如：
+
+```text
+workspace-manifest.json
+编程/程序块/MAIN.st.txt
+编程/程序块/SBR_001.st.txt
+编程/程序块/INT_001.st.txt
+系统变量表/_SYS_COM.svt.json
+全局变量/变量表/变量表.gvt.json
+配置/EtherCAT/EtherCat.dat.json
+变量监控表/MAIN/MAIN.mon.json
+交叉引用表/CrossTable.crs.json
+元件使用表/ElemUseInfo.esi.json
+```
+
+规则：
+
+- 代码文件直接改 `.st.txt`。
+- AutoShop 私有二进制文件改对应 JSON；当前可安全编辑的是 `contentBase64` 整体内容，不提供伪造的行级字段。
+- `workspace apply` 会读取 `workspace-manifest.json`，只写回发生变化的文件。
+- 默认检查工程文件自导出后是否被别人改过；发现 SHA 不一致会拒绝，确认后可用 `--force`。
+- 默认写回前备份；只有显式加 `--no-backup` 才不备份。
+- AutoShop 打开同一工程时默认拒绝写回；确认接受风险后加 `--allow-open-project`。
+- 需要让 AutoShop 已打开窗口刷新时加 `--refresh`。
 
 ## `project`
 
