@@ -17,6 +17,14 @@ scripts/autoshop-agent.exe
 
 这个目录只是已开发好的 skill 包。除非用户明确要求安装，否则不要把它复制或安装到 Codex 的 skill 目录，也不要修改 Codex 配置。
 
+在 `D:\program\PLC` 当前工作区，项目映射固定使用：
+
+```text
+D:\program\PLC\AutoShopAgentInterfaceWork\current-export
+```
+
+不要在 `D:\program\PLC` 根目录生成 `project001-*` 映射目录；临时验证目录放到 `D:\program\PLC\AutoShopAgentInterfaceWork\archive` 下。不要把 workspace、smoke 工程或临时导出放进本 skill 文件夹；`AutoShopAgentInterface` 内只保留最终 CLI、说明文档和 skill 元数据。
+
 ## 能力边界
 
 - 当前版本面向无 PLC 真机环境，默认只做本地文件、LiteST 文本、AutoShop UI 窗口操作、静默窗口截图和安全的侧车文件。
@@ -36,9 +44,9 @@ scripts/autoshop-agent.exe
 导出工程 workspace，修改后应用回工程：
 
 ```powershell
-.\scripts\autoshop-agent.exe workspace export --project D:\program\PLC\project001 --out D:\tmp\project001-workspace --force
-.\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\tmp\project001-workspace --dry-run --format json
-.\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\tmp\project001-workspace --allow-open-project --refresh
+.\scripts\autoshop-agent.exe workspace export --project D:\program\PLC\project001 --out D:\program\PLC\AutoShopAgentInterfaceWork\current-export --force
+.\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\program\PLC\AutoShopAgentInterfaceWork\current-export --dry-run --format json
+.\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\program\PLC\AutoShopAgentInterfaceWork\current-export --allow-open-project --refresh
 ```
 
 全局变量表位于 `全局变量/变量表/变量表.gvt.json`，优先编辑其中的 `variables` 数组，不要手工编辑 `.gvt` 或伪造 `contentBase64`。已按当前样本验证 BOOL、BYTE、INT、DINT、REAL、ARRAY、IP、STRING/STRING<...>、自定义结构体和以 _s/_u 开头的系统结构/联合类型。

@@ -9,6 +9,7 @@
 - 默认后端为 simulator。涉及 PLC、在线监控、通讯扫描、运动控制和构建交付的命令会执行并保存模拟状态或生成模拟文件，但不会连接、扫描、运行、停止、下载、上传或写入真实 PLC。
 - 显式指定 --backend hardware 时，当前版本会拒绝执行并提示硬件后端尚未实现。
 - 文件编辑主流程是 workspace export 和 workspace apply：先把 AutoShop 工程按软件工程树导出成可编辑文件夹，修改文件夹里的 .st.txt 或 JSON，再统一应用回工程。
+- 在 D:\program\PLC 当前工作区，项目映射固定使用 D:\program\PLC\AutoShopAgentInterfaceWork\current-export；临时验证目录放在 D:\program\PLC\AutoShopAgentInterfaceWork\archive 下。不要在根目录生成 project001-* 映射目录，也不要把 workspace 或 smoke 工程放进 AutoShopAgentInterface skill 文件夹。
 - workspace apply 实际写入后会立即从工程文件回读并比对内容 SHA；JSON 输出中的 verified=true 和 readBackSha256 表示该项已经回读确认。
 - .ST 写回只支持既有 POU 容器。workspace 里的 编程/程序块/*.st.txt 会写回对应 .ST 容器的 LiteST 文本块。
 - 配置、监控、交叉引用、元件使用表等未解析的私有二进制内容会以 JSON 包装文件导出，字段包含来源、SHA 和 contentBase64。全局变量/变量表/变量表.gvt 若能识别，会导出为专用语义 JSON：format=autoshop-agent-global-variable-table.v1，kind=global-variable-table，用户只编辑 variables 数组，workspace apply 会根据当前工程里的 .gvt 模板重建私有二进制。变量记录支持 BOOL、BYTE、INT、DINT、REAL、ARRAY、IP、STRING/STRING<...>、自定义结构体和以 _s/_u 开头的系统结构/联合类型；STRING、ARRAY 和结构体等带显式 dataType 的行可位于任意位置。
@@ -55,6 +56,11 @@
     autoshop-agent.exe workspace apply --project <dir> --in <workspace-dir> [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh]
 
 导出的文件夹按 AutoShop 工程树排布。代码改 编程/程序块/*.st.txt；全局变量表改 全局变量/变量表/变量表.gvt.json 里的 variables 数组；结构体改 全局变量/结构体/*.stru.json 里的 definition.members；功能块实例改 全局变量/功能块实例/功能块实例.fbi.json 里的 instances。不需要也不应手工编辑 .gvt/.stru/.fbi 或 contentBase64。写回前建议先执行 workspace apply --dry-run --format json。
+
+本工作区示例固定路径：
+
+    autoshop-agent.exe workspace export --project D:\program\PLC\project001 --out D:\program\PLC\AutoShopAgentInterfaceWork\current-export --force
+    autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\program\PLC\AutoShopAgentInterfaceWork\current-export --dry-run --format json
 
 ### project
 
