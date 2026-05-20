@@ -22,12 +22,14 @@ CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容
 
 `workspace export` 会在 `变量表.gvt.json` 中导出：
 
+- `format: "autoshop-agent-global-variable-table.v1"`
+- `kind: "global-variable-table"`
 - `semanticType: "global-variable-table-v5.03"`
-- `globalVariableRows`
+- `variables`
 
-`workspace apply` 会优先根据 `globalVariableRows` 重建 `.gvt` 内部变量行数组，并复用已有样本行的隐藏类型/标志字段。未确认的新字段不要直接伪造；保留 `contentBase64` 作为字节级兜底。
+`workspace apply` 会根据 `variables` 重建 `.gvt` 内部变量行数组，并复用当前工程 `.gvt` 作为模板。用户不要直接编辑 `.gvt`，也不要为变量表伪造 `contentBase64`。
 
-当前已采样的 `STRING<128>` 格式把显式 `dataType` 保存为最后一个变量记录之后的尾部字符串，而不是记录内部字段。因此编辑 `globalVariableRows` 时必须让带 `dataType` 的行保持最后；新增 BOOL 等普通变量应插入到它之前。CLI 会在 dry-run/apply 阶段拒绝把带 `dataType` 的行写在中间，以避免 AutoShop 重新打开后变量表读空。
+当前已采样的 `STRING<128>` 格式把显式 `dataType` 保存为最后一个变量记录之后的尾部字符串，而不是记录内部字段。因此编辑 `variables` 时必须让 `STRING<128>` 等尾部 `dataType` 行保持最后；新增 BOOL 等普通变量应插入到它之前。CLI 会在 dry-run/apply 阶段拒绝把尾部 `dataType` 行写在中间，以避免 AutoShop 重新打开后变量表读空。
 
 ## 编码
 

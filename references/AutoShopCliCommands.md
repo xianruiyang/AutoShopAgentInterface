@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：autoshop-agent.exe v0.8.6。
+适用版本：autoshop-agent.exe v0.8.7。
 
 本文只记录当前 CLI 的使用方式、能力边界和安全约束，不记录开发计划。
 
@@ -11,7 +11,7 @@
 - 文件编辑主流程是 workspace export 和 workspace apply：先把 AutoShop 工程按软件工程树导出成可编辑文件夹，修改文件夹里的 .st.txt 或 JSON，再统一应用回工程。
 - workspace apply 实际写入后会立即从工程文件回读并比对内容 SHA；JSON 输出中的 verified=true 和 readBackSha256 表示该项已经回读确认。
 - .ST 写回只支持既有 POU 容器。workspace 里的 编程/程序块/*.st.txt 会写回对应 .ST 容器的 LiteST 文本块。
-- 配置、监控、交叉引用、元件使用表等私有二进制内容会以 JSON 包装文件导出，字段包含来源、SHA 和 contentBase64。全局变量/变量表/变量表.gvt 会额外导出 semanticType=global-variable-table-v5.03 和 globalVariableRows，可通过 JSON 编辑最后一个 CLVTItem 内部的真实变量行数组。当前采样格式只支持带 dataType 的类型尾部挂在最后一行；添加 BOOL 等普通变量时，应插入到 STRING<128> 等带 dataType 的行之前，CLI 会拒绝把带 dataType 的行写在中间。
+- 配置、监控、交叉引用、元件使用表等未解析的私有二进制内容会以 JSON 包装文件导出，字段包含来源、SHA 和 contentBase64。全局变量/变量表/变量表.gvt 若能识别，会导出为专用语义 JSON：format=autoshop-agent-global-variable-table.v1，kind=global-variable-table，用户只编辑 variables 数组，workspace apply 会根据当前工程里的 .gvt 模板重建私有二进制。当前采样格式中 STRING<128> 等尾部 dataType 行必须保持最后；新增 BOOL 等普通变量时插入到它之前。
 - var table、project node、pou 等细粒度命令保留为底层/兼容命令；正常文件编辑优先使用 workspace export/apply。
 - 外部写回后，AutoShop 已打开的编辑窗口不会自动刷新。需要执行 ui refresh --program <name>、ui refresh-path --path <tree-path>，或在 workspace apply / pou import 时加 --refresh。
 - ui screenshot 使用 Win32 PrintWindow 按窗口句柄输出 PNG，不会把 AutoShop 切到前台。目标窗口最小化时可传入 --restore-offscreen：CLI 会把 AutoShop 临时恢复到虚拟屏幕右下角几乎屏幕外，截图后若原来是最小化则立即最小化回去。若传入 --allow-minimized，输出可能为空白，JSON 中的 nonBlank/uniqueProbe 可用于快速判断。
@@ -53,7 +53,7 @@
     autoshop-agent.exe workspace export --project <dir> --out <workspace-dir> [--force]
     autoshop-agent.exe workspace apply --project <dir> --in <workspace-dir> [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh]
 
-导出的文件夹按 AutoShop 工程树排布。代码改 编程/程序块/*.st.txt；全局变量表改 全局变量/变量表/变量表.gvt.json 里的 globalVariableRows，保留 contentBase64 作为字节级兜底。若原表包含 STRING<128> 等 dataType 行，新增普通变量放在这些行之前，让 dataType 行保持最后。写回前建议先执行 workspace apply --dry-run --format json。
+导出的文件夹按 AutoShop 工程树排布。代码改 编程/程序块/*.st.txt；全局变量表改 全局变量/变量表/变量表.gvt.json 里的 variables 数组，不需要也不应手工编辑 .gvt 或 contentBase64。若原表包含 STRING<128> 等尾部 dataType 行，新增普通变量放在这些行之前，让尾部 dataType 行保持最后。写回前建议先执行 workspace apply --dry-run --format json。
 
 ### project
 

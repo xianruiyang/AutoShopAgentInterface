@@ -20,7 +20,7 @@ go test ./...
 
 - ST 容器导出/写回 round-trip
 - `workspace export/apply`：导出工程镜像文件夹，修改 `编程/程序块/MAIN.st.txt` 和一个 JSON 包装表文件，dry-run 后应用回工程，并检查每个写入项 `verified=true` 与 `readBackSha256`
-- `全局变量/变量表/变量表.gvt.json` 的 `globalVariableRows` 语义导出、未改动逐字节重建、按内部变量行数组写入后回读解析，以及带 `dataType` 行必须保持最后的拒写保护
+- `全局变量/变量表/变量表.gvt.json` 的专用 `variables` 语义导出、未改动逐字节重建、按内部变量行数组新增 BOOL 后回读解析，以及 `STRING<128>` 等尾部 `dataType` 行必须保持最后的拒写保护
 - `project check/info/archive pack/archive unpack`
 - `project node list/info/export/import --dry-run`，包含 `program`、`config`、`variable` 等分类
 - `pou list/export/import --dry-run/add/remove/rename`
