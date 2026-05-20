@@ -14,7 +14,18 @@
 - `length < 0xFFFF`：`FF` 加 2 字节小端长度。
 - 更长文本：`FF FF FF` 加 4 字节小端长度。
 
-CLI 写回时只替换这个最终文本块，并保留其余二进制内容。
+CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容。
+
+## 全局变量表样本
+
+`全局变量/变量表/变量表.gvt` 已通过用户在 AutoShop 内手工创建变量得到样本。该文件是 AutoShop 5.03 `CLVTItem` 序列化格式，表内保持 4 个槽位；有效变量行应填入既有槽位，而不是追加第 5 行。
+
+`workspace export` 会在 `变量表.gvt.json` 中导出：
+
+- `semanticType: "global-variable-table-v5.03"`
+- `globalVariableRows`
+
+`workspace apply` 会优先根据 `globalVariableRows` 重建 `.gvt`，并复用已有样本行的隐藏类型/标志字段。未确认的新字段不要直接伪造；保留 `contentBase64` 作为字节级兜底。
 
 ## 编码
 
@@ -36,6 +47,6 @@ CLI 写回时只替换这个最终文本块，并保留其余二进制内容。
 
 - 新建或删除 POU 节点。
 - 编辑 `.hcp` 工程表。
-- 编辑变量表、硬件配置或交叉引用数据。
+- 语义化编辑硬件配置、交叉引用数据，或未采样确认的其它私有变量表格式。
 
 写回默认创建备份。只有显式传入 `--no-backup` 时才跳过备份。
