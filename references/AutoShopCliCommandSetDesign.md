@@ -2,19 +2,21 @@
 
 状态：设计文档 + 当前实现状态记录。本文中的“目标命令”仍表示长期接口；“当前已实现”只表示随包 `scripts/autoshop-agent.exe` 的离线能力。
 
-## 当前实现状态（v0.2.0）
+## 当前实现状态（v0.3.0）
 
 当前 exe 已实现以下无 PLC 真机可用能力：
 
 - `config init/show/validate/get/set/profile add/list/remove`
-- `project info/tree/check/backup/compare`
-- `pou list/show/export/export-all/import`
+- `project info/tree/check/backup/compare/archive pack/archive unpack`
+- `pou list/show/export/export-all/import/add/remove/rename`
 - `st lint/parse/symbols/refs/format/scaffold/instruction search/show`
-- `var list/validate`，其中 `var list` 只从 ST 文本中提取赋值符号和软元件引用
+- `var list/export/system list/validate`，其中 `list/export` 只从 ST 文本中提取赋值符号和软元件引用，`system list` 只枚举 `_SYS_*.svt` 文件
 - `build check/diagnostics`，等价于本地工程检查
 - `diagnose project/error-code`，错误码库目前只是占位摘要
 - `ui windows/refresh/close/open/focus/tree`
 - `doc sources/outline/search/command-set`
+- `comm serial show/ethernet show/can show`，只列出相关工程配置文件，不反序列化写入
+- `trace list/add/remove/export`，只维护 `.autoshop-agent/traces.json` 本地侧车定义，不启动 PLC 采样
 - 兼容旧命令：`list`、`export`、`import`、`windows`、`refresh`
 
 当前 exe 对以下真实设备或 AutoShop 内部能力只提供安全占位，不会连接 PLC、扫描网段、打开 USB、RUN/STOP、下载、写设备或修改通讯/运动配置：
@@ -22,10 +24,12 @@
 - `target` 除 `scan` 返回空列表外均为占位；`target scan` 也不会发起网络或 USB 探测
 - `online`
 - `monitor`
-- `trace start/stop/export`，`trace list` 返回空占位
-- `comm`
+- `trace start/stop`
+- `comm` 的写入、扫描和在线状态子命令
 - `motion`
 - `build compile/down/updown`
+- `pou add/remove/rename` 已有结构化计划输出，但不会修改工程元数据
+- `var import/bind` 只返回安全占位，不修改变量表
 
 注意：`project backup` 读取当前工程文件。如果 AutoShop 正打开工程且某些文件被独占锁定，备份会失败；需要关闭 AutoShop 或对离线副本执行备份。
 

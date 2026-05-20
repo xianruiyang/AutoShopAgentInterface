@@ -19,8 +19,8 @@ scripts/autoshop-agent.exe
 
 ## 能力边界
 
-- 当前版本面向无 PLC 真机环境，默认只做本地文件、LiteST 文本和 AutoShop UI 窗口操作。
-- `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 不会扫描网段、连接 USB、RUN/STOP、下载工程或写设备。
+- 当前版本面向无 PLC 真机环境，默认只做本地文件、LiteST 文本、AutoShop UI 窗口操作和安全的侧车文件。
+- `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 不会扫描网段、连接 USB、RUN/STOP、下载工程或写设备；其中部分 `show/list` 子命令只列出本地工程文件。
 - 写回 `.ST` 容器只支持既有程序文件；不要用 CLI 新增、删除或重命名 POU，除非后续已经明确工程元数据格式。
 - 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；需要用 `ui refresh --program <name>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。
 
@@ -84,6 +84,23 @@ LiteST 文本分析：
 .\scripts\autoshop-agent.exe st parse --in D:\tmp\MAIN.st.txt --format json
 .\scripts\autoshop-agent.exe st refs --in D:\tmp\MAIN.st.txt --symbol M123
 .\scripts\autoshop-agent.exe st instruction search modbus --format json
+```
+
+工程归档、变量和通讯配置文件查看：
+
+```powershell
+.\scripts\autoshop-agent.exe project archive pack --project D:\program\PLC\project001-copy --out D:\tmp\project.agent.zip
+.\scripts\autoshop-agent.exe var export --project D:\program\PLC\project001 --out D:\tmp\vars.json
+.\scripts\autoshop-agent.exe var system list --project D:\program\PLC\project001 --format json
+.\scripts\autoshop-agent.exe comm serial show --project D:\program\PLC\project001 --format json
+```
+
+Trace 本地侧车定义，不启动 PLC 采样：
+
+```powershell
+.\scripts\autoshop-agent.exe trace add --project D:\program\PLC\project001-copy --name bench --items D100,M0
+.\scripts\autoshop-agent.exe trace list --project D:\program\PLC\project001-copy --format json
+.\scripts\autoshop-agent.exe trace export --project D:\program\PLC\project001-copy --name bench --out D:\tmp\trace.csv
 ```
 
 无 PLC 安全占位示例：
@@ -161,4 +178,10 @@ references/AutoShopUiRefresh.md
 
 ```text
 references/AutoShopCliCommandSetDesign.md
+```
+
+维护或运行测试前，先读：
+
+```text
+references/AutoShopCliTesting.md
 ```
