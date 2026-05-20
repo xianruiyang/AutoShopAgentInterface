@@ -33,7 +33,7 @@ go test ./...
 - `var table list/info/export/import --dry-run` 和表级二进制替换用例
 - `comm serial/ethernet show`
 - `ui screenshot` 的窗口句柄解析单元测试；真实 AutoShop 截图需在窗口未最小化时手动 smoke
-- `ui refresh-project` 的纯函数测试覆盖 AutoShop 标题工程路径解析、`.hcp/.hcpp` 工程文件选择，以及打开窗口到工程树恢复目标的推断；真实关闭/重新打开工程属于手动 UI smoke
+- `ui close-project` / `ui restore-project` / `ui refresh-project` 的纯函数测试覆盖 AutoShop 标题工程路径解析、`.hcp/.hcpp` 工程文件选择、工程刷新状态 JSON 往返，以及打开窗口到工程树恢复目标的推断；真实关闭/重新打开工程属于手动 UI smoke
 - `trace add/list/export`
 - `target/online/monitor/comm/motion/build` 的 simulator JSON
 - `target/online/monitor/comm/motion/build` 的 simulator 后端执行结果，要求 `implemented=true` 且 `safe=true`

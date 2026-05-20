@@ -36,7 +36,7 @@ D:\program\PLC\AutoShopAgentInterfaceWork\current-export
 - 配置、监控表、交叉引用表、元件使用表等未解析的私有二进制内容导出为 JSON 包装文件；全局变量表 `变量表.gvt` 若能识别，会导出为专用语义 JSON，`variables` 是可直接编辑的变量数组。`STRING<128>`、结构体、数组等带显式 `dataType` 的变量由 CLI 写入记录扩展，可以在 `variables` 中按需要排序。变量行支持 `powerRetain`=`保持|不保持` 和 `networkAccess`=`私有|公有|输入/输出`，对应 AutoShop 变量表中的掉电保持和网络公开列。
 - `全局变量/结构体/*.stru.json` 的 `definition.members` 可编辑自定义结构体成员；在该目录新增符合 `autoshop-agent-struct-definition.v1` 的 `*.stru.json` 后，`workspace apply` 会创建新的 `.stru` 自定义结构体文件，并同步维护 `.hcp` 中 `FileType=31` 的结构体登记。若工程里已有未登记的 `.stru`，`workspace apply` 也会补齐工程索引。`全局变量/功能块实例/功能块实例.fbi.json` 的 `instances` 可编辑功能块实例。它们都通过 `workspace apply` 重建 AutoShop 私有二进制文件。
 - `pou`、`var table`、`project node` 只保留为底层/兼容/诊断命令；正常文件编辑必须优先使用 workspace。
-- 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；ST/普通树节点可用 `workspace apply --refresh`、`ui refresh --program <name>`、`ui refresh-path --path <tree-path>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。变量表等工程级缓存需要用 `ui refresh-project`：先记录当前工程、已打开窗口和活动窗口，再关闭工程、重新打开工程、恢复窗口和焦点。
+- 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；ST/普通树节点可用 `workspace apply --refresh`、`ui refresh --program <name>`、`ui refresh-path --path <tree-path>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。变量表等工程级缓存优先用 `ui close-project` 记录当前工程、已打开窗口和活动窗口并关闭工程，再用 `ui restore-project` 读取状态文件、重新打开工程、恢复窗口和焦点；`ui refresh-project` 只保留为一次性兼容封装。
 - `ui screenshot` 使用 Win32 `PrintWindow` 按窗口句柄输出 PNG，不会把 AutoShop 切到前台。目标窗口最小化时使用 `--restore-offscreen`：CLI 会把 AutoShop 临时恢复到虚拟屏幕右下角几乎屏幕外，截图后若原来是最小化则立即最小化回去。
 
 ## 常用命令
@@ -97,8 +97,8 @@ D:\program\PLC\AutoShopAgentInterfaceWork\current-export
 
 变量表等工程级缓存刷新：
 ```powershell
-.\scripts\autoshop-agent.exe ui refresh-project --project D:\program\PLC\project001 --dry-run --format json
-.\scripts\autoshop-agent.exe ui refresh-project --project D:\program\PLC\project001 --format json
+.\scripts\autoshop-agent.exe ui close-project --project D:\program\PLC\project001 --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
+.\scripts\autoshop-agent.exe ui restore-project --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
 ```
 
 查看 AutoShop 窗口和工程树：
