@@ -1,20 +1,20 @@
-# AutoShop POU Window Refresh Notes
+# AutoShop POU 窗口刷新记录
 
-AutoShop keeps already-open ST/POU editor buffers in memory. After external `*.ST` writeback, the visible editor does not reload immediately.
+AutoShop 会把已经打开的 ST/POU 编辑器内容保留在内存中。外部写回 `*.ST` 后，可见编辑器不会立即从磁盘重新加载。
 
-The tested refresh flow is:
+已验证的刷新流程：
 
-1. Find the running `AutoShop.exe` process.
-2. Enumerate MDI child windows and find the POU whose title equals the requested program name.
-3. Send `WM_CLOSE` to that MDI child.
-4. Find the project tree under the `工程管理` pane.
-5. Find the tree path `编程/程序块/<program>`.
-6. Select and double-click that node.
-7. Verify the POU window is open again.
+1. 查找正在运行的 `AutoShop.exe` 进程。
+2. 枚举 MDI 子窗口，找到标题等于目标程序名的 POU。
+3. 向该 MDI 子窗口发送 `WM_CLOSE`。
+4. 查找 `工程管理` 面板下的工程树。
+5. 在工程树中查找路径 `编程/程序块/<program>`。
+6. 选中并双击该节点。
+7. 再次枚举 MDI 子窗口，确认目标 POU 已重新打开。
 
-The CLI does not click save/confirm dialogs. If the editor is dirty and AutoShop refuses to close it, the command must fail and report that user action is required.
+CLI 不会点击保存、确认或放弃之类的弹窗。如果编辑器存在未保存内容，AutoShop 可能拒绝关闭窗口，此时命令必须失败，并提示需要用户手动处理弹窗。
 
-Localized tree labels are configurable:
+本地化 UI 文本可配置：
 
 ```json
 {

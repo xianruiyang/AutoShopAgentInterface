@@ -1,79 +1,89 @@
 ---
 name: autoshop-agent-interface
-description: "Use when Codex needs to operate Inovance AutoShop Lite ST projects through the bundled CLI: list existing ST program containers, export embedded ST text to txt, import txt back into existing .ST files, inspect open AutoShop POU windows, or close and reopen an AutoShop POU window by name after external writeback."
+description: "当 Codex 需要通过随包 CLI 操作汇川 Inovance AutoShop Lite ST 工程时使用：列出现有 ST 程序容器、导出内嵌 ST 文本到 txt、从 txt 写回既有 .ST 文件、查看 AutoShop 已打开的 POU 窗口，或在外部写回后按名称关闭并重新打开 AutoShop POU 窗口。"
 ---
 
 # AutoShop Agent Interface
 
-## Core Rule
+## 核心规则
 
-Use the bundled CLI at `scripts/autoshop-agent.exe`. Do not reimplement AutoShop binary ST parsing or Win32 window refresh logic unless the executable itself needs maintenance.
+优先使用随 skill 打包的 CLI：
 
-This skill is a developed package only. Do not install it into a Codex skill directory unless the user explicitly asks.
+```text
+scripts/autoshop-agent.exe
+```
 
-## Quick Commands
+除非需要维护这个可执行文件本身，否则不要重新实现 AutoShop 二进制 ST 解析或 Win32 窗口刷新逻辑。
 
-List ST containers:
+这个目录只是一个已开发好的 skill 包。除非用户明确要求安装，否则不要把它复制或安装到 Codex 的 skill 目录，也不要修改 Codex 配置。
+
+## 快速命令
+
+列出工程内 ST 容器：
 
 ```powershell
 .\scripts\autoshop-agent.exe list --project D:\program\PLC\project001
 ```
 
-Export one program to txt:
+导出单个程序到 txt：
 
 ```powershell
 .\scripts\autoshop-agent.exe export --project D:\program\PLC\project001 --program MAIN --out D:\tmp\MAIN.st.txt
 ```
 
-Export all ST programs:
+导出全部 ST 程序：
 
 ```powershell
 .\scripts\autoshop-agent.exe export --project D:\program\PLC\project001 --out D:\tmp\st-export
 ```
 
-Import txt back into an existing program:
+从 txt 写回既有程序：
 
 ```powershell
 .\scripts\autoshop-agent.exe import --project D:\program\PLC\project001 --program MAIN --in D:\tmp\MAIN.st.txt
 ```
 
-If AutoShop is opening the same project and the user accepts the risk, add `--allow-open-project`.
+如果 AutoShop 正在打开同一工程，并且用户明确接受风险，添加：
 
-Write back and refresh the opened POU window:
+```text
+--allow-open-project
+```
+
+写回后刷新 AutoShop 内已打开的 POU 窗口：
 
 ```powershell
 .\scripts\autoshop-agent.exe import --project D:\program\PLC\project001 --program MAIN --in D:\tmp\MAIN.st.txt --allow-open-project --refresh
 ```
 
-Refresh only:
+只刷新窗口：
 
 ```powershell
 .\scripts\autoshop-agent.exe refresh --program MAIN
 ```
 
-Inspect open AutoShop POU windows:
+查看 AutoShop 当前打开的 POU 窗口：
 
 ```powershell
 .\scripts\autoshop-agent.exe windows
 ```
 
-## Config
+## 配置
 
-Default config path:
+默认配置路径：
 
 ```text
 %APPDATA%\AutoShopAgentInterface\config.json
 ```
 
-Use `AUTOSHOP_AGENT_CONFIG` or `--config` to override it.
+也可以使用 `AUTOSHOP_AGENT_CONFIG` 环境变量或 `--config` 参数覆盖。
 
-Create or update config:
+创建或更新配置：
 
 ```powershell
 .\scripts\autoshop-agent.exe config init --project D:\program\PLC\project001 --force
 ```
 
-Relevant JSON fields:
+关键 JSON 字段：
 
 ```json
 {
@@ -85,19 +95,31 @@ Relevant JSON fields:
   "openWaitMs": 900,
   "processId": 0,
   "ui": {
-    "projectTreeTitle": "<localized project tree pane title>",
-    "programmingNode": "<localized programming node>",
-    "programBlockNode": "<localized program block node>"
+    "projectTreeTitle": "工程管理",
+    "programmingNode": "编程",
+    "programBlockNode": "程序块"
   }
 }
 ```
 
-`autoShopExePath` is reserved for future launch support. Current list/export/import/refresh operations do not depend on the AutoShop installation path.
+`autoShopExePath` 目前只为未来“自动启动 AutoShop”保留。当前 `list`、`export`、`import`、`refresh` 不依赖 AutoShop 安装路径。
 
-## References
+## 参考资料
 
-Read `references/AutoShopLiteStFormat.md` before changing writeback behavior.
+修改写回行为前，先读：
 
-Read `references/AutoShopUiRefresh.md` before changing or troubleshooting window refresh behavior.
+```text
+references/AutoShopLiteStFormat.md
+```
 
-Read `references/AutoShopCliCommandSetDesign.md` before expanding the CLI beyond the currently implemented ST import/export and UI refresh commands.
+修改或排查窗口刷新行为前，先读：
+
+```text
+references/AutoShopUiRefresh.md
+```
+
+扩展 CLI 到当前已实现的 ST 导入导出和 UI 刷新之外前，先读：
+
+```text
+references/AutoShopCliCommandSetDesign.md
+```

@@ -1,41 +1,41 @@
-# AutoShop Lite ST Container Notes
+# AutoShop Lite ST 容器记录
 
-Use these notes when maintaining or diagnosing `scripts/autoshop-agent.exe`.
+维护或诊断 `scripts/autoshop-agent.exe` 时使用本文档。
 
-## Verified Container Shape
+## 已验证的容器结构
 
-The tested AutoShop Lite project stores `MAIN.ST`, `INT_001.ST`, and `SBR_001.ST` as binary containers, not plain text. Each file starts with ASCII `AutoShop`.
+已测试的 AutoShop Lite 工程中，`MAIN.ST`、`INT_001.ST`、`SBR_001.ST` 不是纯文本文件，而是二进制容器。每个文件都以 ASCII 签名 `AutoShop` 开头。
 
-The editable ST source body is the final MFC-style `CString` block before four trailing zero bytes.
+可编辑的 ST 源码位于文件尾部，是最后一个 MFC 风格的 `CString` 文本块，后面跟随 4 个 `00` 字节。
 
-Length header rules:
+长度头规则：
 
-- `length < 0xFF`: one byte length.
-- `length < 0xFFFF`: `FF` plus a two-byte little-endian length.
-- longer text: `FF FF FF` plus a four-byte little-endian length.
+- `length < 0xFF`：1 字节长度。
+- `length < 0xFFFF`：`FF` 加 2 字节小端长度。
+- 更长文本：`FF FF FF` 加 4 字节小端长度。
 
-The CLI preserves all bytes outside that final text block.
+CLI 写回时只替换这个最终文本块，并保留其余二进制内容。
 
-## Encoding
+## 编码
 
-Project embedded ST text defaults to GB2312/CP936.
+工程内嵌 ST 文本默认按 GB2312/CP936 处理。
 
-Exported txt defaults to UTF-8.
+导出的 txt 默认按 UTF-8 写出。
 
-Change these only through JSON config or CLI flags unless a project proves a different encoding.
+除非某个工程已经证明使用不同编码，否则只通过 JSON 配置或 CLI 参数调整编码，不要在代码里写死特殊规则。
 
-## Safety Boundary
+## 安全边界
 
-Supported:
+已支持：
 
-- List existing `*.ST` program containers.
-- Export embedded ST source text.
-- Import txt into an existing `*.ST` container.
+- 列出现有 `*.ST` 程序容器。
+- 导出内嵌 ST 源码。
+- 将 txt 写回既有 `*.ST` 容器。
 
-Not supported:
+未支持：
 
-- Creating or deleting POU nodes.
-- Editing `.hcp` project tables.
-- Editing variable tables, hardware configuration, or cross-reference data.
+- 新建或删除 POU 节点。
+- 编辑 `.hcp` 工程表。
+- 编辑变量表、硬件配置或交叉引用数据。
 
-Writes create backups unless `--no-backup` is supplied.
+写回默认创建备份。只有显式传入 `--no-backup` 时才跳过备份。
