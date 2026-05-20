@@ -18,14 +18,14 @@ CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容
 
 ## 全局变量表样本
 
-`全局变量/变量表/变量表.gvt` 已通过用户在 AutoShop 内手工创建变量得到样本。该文件是 AutoShop 5.03 `CLVTItem` 序列化格式，表内保持 4 个槽位；有效变量行应填入既有槽位，而不是追加第 5 行。
+`全局变量/变量表/变量表.gvt` 已通过用户在 AutoShop 内手工创建变量得到样本。该文件是 AutoShop 5.03 `CLVTItem` 序列化格式，顶层保持 4 个 `CLVTItem` 对象；真实变量行位于最后一个对象的内部数组，不能把第二个变量写成新的顶层对象。
 
 `workspace export` 会在 `变量表.gvt.json` 中导出：
 
 - `semanticType: "global-variable-table-v5.03"`
 - `globalVariableRows`
 
-`workspace apply` 会优先根据 `globalVariableRows` 重建 `.gvt`，并复用已有样本行的隐藏类型/标志字段。未确认的新字段不要直接伪造；保留 `contentBase64` 作为字节级兜底。
+`workspace apply` 会优先根据 `globalVariableRows` 重建 `.gvt` 内部变量行数组，并复用已有样本行的隐藏类型/标志字段。未确认的新字段不要直接伪造；保留 `contentBase64` 作为字节级兜底。
 
 ## 编码
 

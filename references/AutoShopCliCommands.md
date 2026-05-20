@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：autoshop-agent.exe v0.8.3。
+适用版本：autoshop-agent.exe v0.8.4。
 
 本文只记录当前 CLI 的使用方式、能力边界和安全约束，不记录开发计划。
 
@@ -11,7 +11,7 @@
 - 文件编辑主流程是 workspace export 和 workspace apply：先把 AutoShop 工程按软件工程树导出成可编辑文件夹，修改文件夹里的 .st.txt 或 JSON，再统一应用回工程。
 - workspace apply 实际写入后会立即从工程文件回读并比对内容 SHA；JSON 输出中的 verified=true 和 readBackSha256 表示该项已经回读确认。
 - .ST 写回只支持既有 POU 容器。workspace 里的 编程/程序块/*.st.txt 会写回对应 .ST 容器的 LiteST 文本块。
-- 配置、监控、交叉引用、元件使用表等私有二进制内容会以 JSON 包装文件导出，字段包含来源、SHA 和 contentBase64。全局变量/变量表/变量表.gvt 会额外导出 semanticType=global-variable-table-v5.03 和 globalVariableRows，可通过 JSON 槽位编辑已有样本格式的变量行。
+- 配置、监控、交叉引用、元件使用表等私有二进制内容会以 JSON 包装文件导出，字段包含来源、SHA 和 contentBase64。全局变量/变量表/变量表.gvt 会额外导出 semanticType=global-variable-table-v5.03 和 globalVariableRows，可通过 JSON 编辑最后一个 CLVTItem 内部的真实变量行数组。
 - var table、project node、pou 等细粒度命令保留为底层/兼容命令；正常文件编辑优先使用 workspace export/apply。
 - 外部写回后，AutoShop 已打开的编辑窗口不会自动刷新。需要执行 ui refresh --program <name>、ui refresh-path --path <tree-path>，或在 workspace apply / pou import 时加 --refresh。
 

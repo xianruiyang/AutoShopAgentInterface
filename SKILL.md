@@ -25,7 +25,7 @@ scripts/autoshop-agent.exe
 - 文件编辑主流程只用 `workspace export` 和 `workspace apply`。先导出成按 AutoShop 工程树排布的文件夹，再修改文件夹，最后应用回工程。
 - `workspace apply` 写回后会自动回读工程文件并校验 SHA；JSON 输出里应检查 `verified=true` 和 `readBackSha256`。
 - 写回 `.ST` 容器只支持既有程序文件；workspace 里的 `编程/程序块/*.st.txt` 会替换对应 `.ST` 容器中的 LiteST 文本块。
-- 配置、监控表、交叉引用表、元件使用表等私有二进制内容导出为 JSON 包装文件；全局变量表 `变量表.gvt` 会额外导出 `globalVariableRows`，可按槽位编辑已有样本格式的变量行。
+- 配置、监控表、交叉引用表、元件使用表等私有二进制内容导出为 JSON 包装文件；全局变量表 `变量表.gvt` 会额外导出 `globalVariableRows`，对应最后一个 `CLVTItem` 内部的真实变量行数组。
 - `pou`、`var table`、`project node` 保留为底层/兼容命令；正常文件编辑优先使用 workspace。
 - 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；需要用 `workspace apply --refresh`、`ui refresh --program <name>`、`ui refresh-path --path <tree-path>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。
 
