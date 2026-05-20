@@ -32,7 +32,7 @@ D:\program\PLC\AutoShopAgentInterfaceWork\current-export
 - 如显式指定 `--backend hardware`，当前版本会拒绝并提示硬件后端尚未实现；真机接入应复用同一命令接口。
 - 文件编辑主流程只用 `workspace export` 和 `workspace apply`。先导出成按 AutoShop 工程树排布的文件夹，再修改文件夹，最后应用回工程。工程内容的新增、删除、修改应通过 workspace JSON/文本镜像应用完成，不要为每类文件操作继续增加独立指令。
 - `workspace apply` 写回后会自动回读工程文件并校验 SHA；JSON 输出里应检查 `verified=true` 和 `readBackSha256`。输出中的 `kind=project-index` 表示 CLI 同步写入了 `.hcp` 工程索引。
-- POU 文件层能力应沉到 `workspace apply` 内部使用：程序块/中断是 `.ST` 容器并登记 `FileType=80`，功能块是 `.FB` 容器并登记 `FileType=81`/`ProgType=7`，函数是 `.FC` 容器并登记 `FileType=82`/`ProgType=8`；同时维护 `folder.txt` 的 `PROG`/`FB`/`FC` 区域。`pou add` 属于底层兼容/诊断入口，不作为推荐编辑流程。
+- POU 文件层能力已沉到 `workspace apply` 内部使用：程序块/中断是 `.ST` 容器并登记 `FileType=80`，功能块是 `.FB` 容器并登记 `FileType=81`/`ProgType=7`，函数是 `.FC` 容器并登记 `FileType=82`/`ProgType=8`；在 `编程/程序块`、`编程/功能块(FB)`、`编程/函数(FC)` 下新增 `*.pou.json` 可由 `workspace apply` 创建对应 POU 文件、维护 `folder.txt`，并同步 `.hcp` 工程索引。`pou add` 属于底层兼容/诊断入口，不作为推荐编辑流程。
 - 配置、监控表、交叉引用表、元件使用表等未解析的私有二进制内容导出为 JSON 包装文件；全局变量表 `变量表.gvt` 若能识别，会导出为专用语义 JSON，`variables` 是可直接编辑的变量数组。`STRING<128>`、结构体、数组等带显式 `dataType` 的变量由 CLI 写入记录扩展，可以在 `variables` 中按需要排序。变量行支持 `powerRetain`=`保持|不保持` 和 `networkAccess`=`私有|公有|输入/输出`，对应 AutoShop 变量表中的掉电保持和网络公开列。
 - `全局变量/结构体/*.stru.json` 的 `definition.members` 可编辑自定义结构体成员；在该目录新增符合 `autoshop-agent-struct-definition.v1` 的 `*.stru.json` 后，`workspace apply` 会创建新的 `.stru` 自定义结构体文件，并同步维护 `.hcp` 中 `FileType=31` 的结构体登记。若工程里已有未登记的 `.stru`，`workspace apply` 也会补齐工程索引。`全局变量/功能块实例/功能块实例.fbi.json` 的 `instances` 可编辑功能块实例。它们都通过 `workspace apply` 重建 AutoShop 私有二进制文件。
 - `pou`、`var table`、`project node` 只保留为底层/兼容/诊断命令；正常文件编辑必须优先使用 workspace。
