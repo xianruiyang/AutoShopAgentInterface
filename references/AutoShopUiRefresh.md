@@ -14,6 +14,23 @@ AutoShop 会把已经打开的 ST/POU 编辑器内容保留在内存中。外部
 
 CLI 不会点击保存、确认或放弃之类的弹窗。如果编辑器存在未保存内容，AutoShop 可能拒绝关闭窗口，此时命令必须失败，并提示需要用户手动处理弹窗。
 
+## 工程级刷新
+
+变量表等内容在 AutoShop 中属于工程级内存模型。直接修改工程文件后，关闭再打开变量表 MDI 页签不会强制 AutoShop 重新读取 `.gvt`。此时使用工程级刷新：
+
+```powershell
+.\scripts\autoshop-agent.exe ui refresh-project --project D:\program\PLC\project001 --dry-run --format json
+.\scripts\autoshop-agent.exe ui refresh-project --project D:\program\PLC\project001 --format json
+```
+
+流程：
+1. 记录当前 AutoShop 主窗口、工程路径、`.hcp/.hcpp` 工程文件、已打开 MDI 子窗口，以及当前活动 MDI 窗口。
+2. 通过 AutoShop 的“文件/关闭工程”菜单关闭当前工程，不自动保存旧内存模型。
+3. 使用当前 AutoShop 进程路径、配置中的 `autoShopExePath` 或文件关联重新打开工程文件。
+4. 按刷新前记录的窗口列表重新打开对应工程树节点，最后把焦点切回刷新前的活动窗口。
+
+若 AutoShop 弹出保存提示或关闭工程失败，命令会停止并报错；先处理未保存内容后再执行。
+
 本地化 UI 文本可配置：
 
 ```json
