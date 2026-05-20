@@ -16,6 +16,17 @@
 
 CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容。
 
+## 功能块/函数 POU 样本
+
+用户在 AutoShop 内手动创建的功能块和函数证明，FB/FC 不是普通 `.ST` 程序块：
+
+- 功能块文件使用 `.FB` 扩展名，`folder.txt` 的 `FB` 区登记 `FILE <name>.FB`，`.hcp` 中登记 `FileType=81`、`ProgType=7`、`POUID=-1`。
+- 函数文件使用 `.FC` 扩展名，`folder.txt` 的 `FC` 区登记 `FILE <name>.FC`，`.hcp` 中登记 `FileType=82`、`ProgType=8`、`POUID=-1`。
+- `.FB/.FC` 文件都是两个连续的 `AutoShop` 私有容器。第一个容器的最后一个 `CLVTItem` 对象在 17 字节对象前缀后保存 POU 名称；第二个容器保存空 LiteST 代码体。
+- `pou add --type fb|fc` 必须从 `.FB/.FC` 模板生成并替换内部名称，不能创建 `.ST` 后放入 `FB`/`FC` 区。
+
+之前错误生成的 `FB_ASAI_001.ST`、`FC_ASAI_001.ST` 是孤立错误文件；AutoShop 会从可见 `folder.txt` 树中移除它们，`.hcp` 中可能留下空 `FileName` 的旧登记。
+
 ## 全局变量表样本
 
 `全局变量/变量表/变量表.gvt` 已通过用户在 AutoShop 内手工创建变量得到样本。该文件是 AutoShop 5.03 `CLVTItem` 序列化格式，顶层保持 4 个 `CLVTItem` 对象；真实变量行位于最后一个对象的内部数组，不能把第二个变量写成新的顶层对象。
@@ -95,7 +106,7 @@ CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容
 
 未支持：
 
-- 新建或删除 POU 节点。
+- 删除或重命名 POU 节点；新增程序块/中断/FB/FC 已通过 `pou add` 支持，但 workspace 目录内直接新增 POU 文件尚未作为主流程支持。
 - 编辑 `.hcp` 工程表。
 - 语义化编辑硬件配置、交叉引用数据，或未采样确认的其它私有表格式。
 
