@@ -23,6 +23,7 @@ scripts/autoshop-agent.exe
 - `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 已有默认 `simulator` 后端实现，可执行并产出结构化状态或文件；不会扫描网段、连接 USB、RUN/STOP 真实 PLC、下载真实设备或写真实设备。
 - 如显式指定 `--backend hardware`，当前版本会拒绝并提示硬件后端尚未实现；真机接入应复用同一命令接口。
 - 文件编辑主流程只用 `workspace export` 和 `workspace apply`。先导出成按 AutoShop 工程树排布的文件夹，再修改文件夹，最后应用回工程。
+- `workspace apply` 写回后会自动回读工程文件并校验 SHA；JSON 输出里应检查 `verified=true` 和 `readBackSha256`。
 - 写回 `.ST` 容器只支持既有程序文件；workspace 里的 `编程/程序块/*.st.txt` 会替换对应 `.ST` 容器中的 LiteST 文本块。
 - 配置、变量表、监控表、交叉引用表、元件使用表等私有二进制内容导出为 JSON 包装文件；当前版本不逐行解析或伪造这些私有二进制字段。
 - `pou`、`var table`、`project node` 保留为底层/兼容命令；正常文件编辑优先使用 workspace。

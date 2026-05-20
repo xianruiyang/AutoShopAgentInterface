@@ -1,6 +1,6 @@
 ﻿# AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe` v0.8.1。
+适用版本：`autoshop-agent.exe` v0.8.2。
 
 可执行文件：
 
@@ -15,6 +15,7 @@ scripts/autoshop-agent.exe
 - 默认后端为 `simulator`。涉及 PLC、在线监控、通讯扫描、运动控制和构建交付的命令会执行并保存模拟状态或生成模拟文件，但不会连接、扫描、运行、停止、下载、上传或写入真实 PLC。
 - 显式指定 `--backend hardware` 时，当前版本会拒绝执行并提示硬件后端尚未实现。
 - 文件编辑主流程是 `workspace export` 和 `workspace apply`：先把 AutoShop 工程按软件工程树导出成一个可编辑文件夹，修改文件夹里的 `.st.txt` 或 JSON，再统一应用回工程。
+- `workspace apply` 实际写入后会立即从工程文件回读并比对内容 SHA；JSON 输出中的 `verified=true` 和 `readBackSha256` 表示该项已经回读确认。
 - `.ST` 写回只支持既有 POU 容器。工作区里的 `编程/程序块/*.st.txt` 会写回对应 `.ST` 容器的 LiteST 文本块。
 - 配置、变量表、监控、交叉引用、元件使用表等私有二进制内容会以 JSON 包装文件导出，字段包含来源、SHA 和 `contentBase64`。当前版本不逐行反序列化这些私有二进制表。
 - `var table`、`project node`、`pou` 等细粒度命令保留为底层/兼容命令；正常文件编辑优先使用 `workspace export/apply`。
@@ -112,6 +113,7 @@ workspace-manifest.json
 - 代码文件直接改 `.st.txt`。
 - AutoShop 私有二进制文件改对应 JSON；当前可安全编辑的是 `contentBase64` 整体内容，不提供伪造的行级字段。
 - `workspace apply` 会读取 `workspace-manifest.json`，只写回发生变化的文件。
+- 非 `--dry-run` 写回后会立即回读工程内容并校验：`.st.txt` 按 LiteST 文本内容 SHA 校验，JSON 包装文件按真实源文件字节 SHA 校验；不一致时命令失败。
 - 默认检查工程文件自导出后是否被别人改过；发现 SHA 不一致会拒绝，确认后可用 `--force`。
 - 默认写回前备份；只有显式加 `--no-backup` 才不备份。
 - AutoShop 打开同一工程时默认拒绝写回；确认接受风险后加 `--allow-open-project`。
