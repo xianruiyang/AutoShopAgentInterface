@@ -1,6 +1,33 @@
 # AutoShop Agent CLI 指令集设计
 
-状态：仅设计文档。本文中的目标命令不代表已经实现。
+状态：设计文档 + 当前实现状态记录。本文中的“目标命令”仍表示长期接口；“当前已实现”只表示随包 `scripts/autoshop-agent.exe` 的离线能力。
+
+## 当前实现状态（v0.2.0）
+
+当前 exe 已实现以下无 PLC 真机可用能力：
+
+- `config init/show/validate/get/set/profile add/list/remove`
+- `project info/tree/check/backup/compare`
+- `pou list/show/export/export-all/import`
+- `st lint/parse/symbols/refs/format/scaffold/instruction search/show`
+- `var list/validate`，其中 `var list` 只从 ST 文本中提取赋值符号和软元件引用
+- `build check/diagnostics`，等价于本地工程检查
+- `diagnose project/error-code`，错误码库目前只是占位摘要
+- `ui windows/refresh/close/open/focus/tree`
+- `doc sources/outline/search/command-set`
+- 兼容旧命令：`list`、`export`、`import`、`windows`、`refresh`
+
+当前 exe 对以下真实设备或 AutoShop 内部能力只提供安全占位，不会连接 PLC、扫描网段、打开 USB、RUN/STOP、下载、写设备或修改通讯/运动配置：
+
+- `target` 除 `scan` 返回空列表外均为占位；`target scan` 也不会发起网络或 USB 探测
+- `online`
+- `monitor`
+- `trace start/stop/export`，`trace list` 返回空占位
+- `comm`
+- `motion`
+- `build compile/down/updown`
+
+注意：`project backup` 读取当前工程文件。如果 AutoShop 正打开工程且某些文件被独占锁定，备份会失败；需要关闭 AutoShop 或对离线副本执行备份。
 
 ## 目标
 

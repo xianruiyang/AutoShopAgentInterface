@@ -1,6 +1,6 @@
 ---
 name: autoshop-agent-interface
-description: "当 Codex 需要通过随包 CLI 操作汇川 Inovance AutoShop Lite ST 工程时使用：列出现有 ST 程序容器、导出内嵌 ST 文本到 txt、从 txt 写回既有 .ST 文件、查看 AutoShop 已打开的 POU 窗口，或在外部写回后按名称关闭并重新打开 AutoShop POU 窗口。"
+description: "当 Codex 需要通过随包 CLI 操作汇川 Inovance AutoShop Lite ST 工程时使用：检查工程、列出/导出/写回既有 ST 程序容器、分析 LiteST 文本、查询本地指令资料摘要、查看或刷新 AutoShop POU 窗口。当前 CLI 支持无 PLC 真机的离线开发流程；target、online、monitor、comm、motion 等真实设备相关命令只做安全占位，不会连接或修改 PLC。"
 ---
 
 # AutoShop Agent Interface
@@ -15,32 +15,40 @@ scripts/autoshop-agent.exe
 
 除非需要维护这个可执行文件本身，否则不要重新实现 AutoShop 二进制 ST 解析或 Win32 窗口刷新逻辑。
 
-这个目录只是一个已开发好的 skill 包。除非用户明确要求安装，否则不要把它复制或安装到 Codex 的 skill 目录，也不要修改 Codex 配置。
+这个目录只是已开发好的 skill 包。除非用户明确要求安装，否则不要把它复制或安装到 Codex 的 skill 目录，也不要修改 Codex 配置。
 
-## 快速命令
+## 能力边界
 
-列出工程内 ST 容器：
+- 当前版本面向无 PLC 真机环境，默认只做本地文件、LiteST 文本和 AutoShop UI 窗口操作。
+- `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 不会扫描网段、连接 USB、RUN/STOP、下载工程或写设备。
+- 写回 `.ST` 容器只支持既有程序文件；不要用 CLI 新增、删除或重命名 POU，除非后续已经明确工程元数据格式。
+- 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；需要用 `ui refresh --program <name>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。
+
+## 常用命令
+
+检查工程和 ST 容器：
 
 ```powershell
-.\scripts\autoshop-agent.exe list --project D:\program\PLC\project001
+.\scripts\autoshop-agent.exe project check --project D:\program\PLC\project001 --format json
+.\scripts\autoshop-agent.exe pou list --project D:\program\PLC\project001
 ```
 
 导出单个程序到 txt：
 
 ```powershell
-.\scripts\autoshop-agent.exe export --project D:\program\PLC\project001 --program MAIN --out D:\tmp\MAIN.st.txt
+.\scripts\autoshop-agent.exe pou export --project D:\program\PLC\project001 --name MAIN --out D:\tmp\MAIN.st.txt
 ```
 
 导出全部 ST 程序：
 
 ```powershell
-.\scripts\autoshop-agent.exe export --project D:\program\PLC\project001 --out D:\tmp\st-export
+.\scripts\autoshop-agent.exe pou export-all --project D:\program\PLC\project001 --out D:\tmp\st-export
 ```
 
 从 txt 写回既有程序：
 
 ```powershell
-.\scripts\autoshop-agent.exe import --project D:\program\PLC\project001 --program MAIN --in D:\tmp\MAIN.st.txt
+.\scripts\autoshop-agent.exe pou import --project D:\program\PLC\project001 --name MAIN --in D:\tmp\MAIN.st.txt
 ```
 
 如果 AutoShop 正在打开同一工程，并且用户明确接受风险，添加：
@@ -49,22 +57,52 @@ scripts/autoshop-agent.exe
 --allow-open-project
 ```
 
+写回前先做不落盘验证：
+
+```powershell
+.\scripts\autoshop-agent.exe pou import --project D:\program\PLC\project001 --name MAIN --in D:\tmp\MAIN.st.txt --dry-run --format json
+```
+
 写回后刷新 AutoShop 内已打开的 POU 窗口：
 
 ```powershell
-.\scripts\autoshop-agent.exe import --project D:\program\PLC\project001 --program MAIN --in D:\tmp\MAIN.st.txt --allow-open-project --refresh
+.\scripts\autoshop-agent.exe pou import --project D:\program\PLC\project001 --name MAIN --in D:\tmp\MAIN.st.txt --allow-open-project --refresh
+.\scripts\autoshop-agent.exe ui refresh --program MAIN
 ```
 
-只刷新窗口：
+查看 AutoShop 窗口和工程树：
 
 ```powershell
+.\scripts\autoshop-agent.exe ui windows --format json
+.\scripts\autoshop-agent.exe ui tree --format json
+```
+
+LiteST 文本分析：
+
+```powershell
+.\scripts\autoshop-agent.exe st lint --in D:\tmp\MAIN.st.txt
+.\scripts\autoshop-agent.exe st parse --in D:\tmp\MAIN.st.txt --format json
+.\scripts\autoshop-agent.exe st refs --in D:\tmp\MAIN.st.txt --symbol M123
+.\scripts\autoshop-agent.exe st instruction search modbus --format json
+```
+
+无 PLC 安全占位示例：
+
+```powershell
+.\scripts\autoshop-agent.exe target scan --format json
+.\scripts\autoshop-agent.exe monitor read --profile bench --device D100 --format json
+```
+
+## 兼容别名
+
+以下旧命令仍可用：
+
+```powershell
+.\scripts\autoshop-agent.exe list --project D:\program\PLC\project001
+.\scripts\autoshop-agent.exe export --project D:\program\PLC\project001 --program MAIN --out D:\tmp\MAIN.st.txt
+.\scripts\autoshop-agent.exe import --project D:\program\PLC\project001 --program MAIN --in D:\tmp\MAIN.st.txt
+.\scripts\autoshop-agent.exe windows --json
 .\scripts\autoshop-agent.exe refresh --program MAIN
-```
-
-查看 AutoShop 当前打开的 POU 窗口：
-
-```powershell
-.\scripts\autoshop-agent.exe windows
 ```
 
 ## 配置
@@ -98,11 +136,12 @@ scripts/autoshop-agent.exe
     "projectTreeTitle": "工程管理",
     "programmingNode": "编程",
     "programBlockNode": "程序块"
-  }
+  },
+  "profiles": {}
 }
 ```
 
-`autoShopExePath` 目前只为未来“自动启动 AutoShop”保留。当前 `list`、`export`、`import`、`refresh` 不依赖 AutoShop 安装路径。
+`autoShopExePath` 目前只为未来“自动启动 AutoShop”保留。当前离线命令和 UI 刷新命令不依赖 AutoShop 安装路径。
 
 ## 参考资料
 
@@ -118,7 +157,7 @@ references/AutoShopLiteStFormat.md
 references/AutoShopUiRefresh.md
 ```
 
-扩展 CLI 到当前已实现的 ST 导入导出和 UI 刷新之外前，先读：
+扩展命令集前，先读：
 
 ```text
 references/AutoShopCliCommandSetDesign.md

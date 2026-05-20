@@ -1,6 +1,6 @@
 interface:
   display_name: "AutoShop Agent Interface"
-  short_description: "通过随包 CLI 操作 AutoShop Lite ST 工程。"
-  default_prompt: "使用 $autoshop-agent-interface 导出、写回或刷新 AutoShop Lite ST 程序。"
+  short_description: "通过随包 CLI 离线操作 AutoShop Lite ST 工程。"
+  default_prompt: "使用 $autoshop-agent-interface 检查、导出、写回或刷新 AutoShop Lite ST 工程；没有 PLC 真机时只使用离线命令。"
 policy:
   allow_implicit_invocation: false
