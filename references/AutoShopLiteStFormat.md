@@ -61,6 +61,8 @@ CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容
 
 成员记录支持基础类型和结构体类型。成员名字段在当前样本中带 1 个结尾 `00` 字节，写回时 CLI 会保留该结构。
 
+新增结构体不仅要写出 `.stru` 文件，还必须登记到 `.hcp` 工程索引。CLI 已实现 AutoShop UCode 加密/解密：`workspace apply` 会同步补齐 `<file FileType=31>` 节点、更新 `MaxFileID`，并以 `kind=project-index` 回读校验。
+
 ## 功能块实例样本
 
 `全局变量/功能块实例/功能块实例.fbi` 已按用户创建的 `TRIG.F_TRIG` 与 `TRIG.R_TRIG` 实例验证。`workspace export` 会导出：

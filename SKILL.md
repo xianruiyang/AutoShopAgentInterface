@@ -31,10 +31,10 @@ D:\program\PLC\AutoShopAgentInterfaceWork\current-export
 - `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 已有默认 `simulator` 后端实现，可执行并产出结构化状态或文件；不会扫描网段、连接 USB、RUN/STOP 真实 PLC、下载真实设备或写真实设备。
 - 如显式指定 `--backend hardware`，当前版本会拒绝并提示硬件后端尚未实现；真机接入应复用同一命令接口。
 - 文件编辑主流程只用 `workspace export` 和 `workspace apply`。先导出成按 AutoShop 工程树排布的文件夹，再修改文件夹，最后应用回工程。
-- `workspace apply` 写回后会自动回读工程文件并校验 SHA；JSON 输出里应检查 `verified=true` 和 `readBackSha256`。
+- `workspace apply` 写回后会自动回读工程文件并校验 SHA；JSON 输出里应检查 `verified=true` 和 `readBackSha256`。输出中的 `kind=project-index` 表示 CLI 同步写入了 `.hcp` 工程索引。
 - 写回 `.ST` 容器只支持既有程序文件；workspace 里的 `编程/程序块/*.st.txt` 会替换对应 `.ST` 容器中的 LiteST 文本块。
 - 配置、监控表、交叉引用表、元件使用表等未解析的私有二进制内容导出为 JSON 包装文件；全局变量表 `变量表.gvt` 若能识别，会导出为专用语义 JSON，`variables` 是可直接编辑的变量数组。`STRING<128>`、结构体、数组等带显式 `dataType` 的变量由 CLI 写入记录扩展，可以在 `variables` 中按需要排序。
-- `全局变量/结构体/*.stru.json` 的 `definition.members` 可编辑自定义结构体成员；在该目录新增符合 `autoshop-agent-struct-definition.v1` 的 `*.stru.json` 后，`workspace apply` 会创建新的 `.stru` 自定义结构体文件。`全局变量/功能块实例/功能块实例.fbi.json` 的 `instances` 可编辑功能块实例。它们都通过 `workspace apply` 重建 AutoShop 私有二进制文件。
+- `全局变量/结构体/*.stru.json` 的 `definition.members` 可编辑自定义结构体成员；在该目录新增符合 `autoshop-agent-struct-definition.v1` 的 `*.stru.json` 后，`workspace apply` 会创建新的 `.stru` 自定义结构体文件，并同步维护 `.hcp` 中 `FileType=31` 的结构体登记。若工程里已有未登记的 `.stru`，`workspace apply` 也会补齐工程索引。`全局变量/功能块实例/功能块实例.fbi.json` 的 `instances` 可编辑功能块实例。它们都通过 `workspace apply` 重建 AutoShop 私有二进制文件。
 - `pou`、`var table`、`project node` 保留为底层/兼容命令；正常文件编辑优先使用 workspace。
 - 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；ST/普通树节点可用 `workspace apply --refresh`、`ui refresh --program <name>`、`ui refresh-path --path <tree-path>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。变量表等工程级缓存需要用 `ui refresh-project`：先记录当前工程、已打开窗口和活动窗口，再关闭工程、重新打开工程、恢复窗口和焦点。
 - `ui screenshot` 使用 Win32 `PrintWindow` 按窗口句柄输出 PNG，不会把 AutoShop 切到前台。目标窗口最小化时使用 `--restore-offscreen`：CLI 会把 AutoShop 临时恢复到虚拟屏幕右下角几乎屏幕外，截图后若原来是最小化则立即最小化回去。
