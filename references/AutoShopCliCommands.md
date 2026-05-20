@@ -1,6 +1,6 @@
-# AutoShop Agent CLI 指令文档
+﻿# AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe` v0.8.0。
+适用版本：`autoshop-agent.exe` v0.8.1。
 
 可执行文件：
 
