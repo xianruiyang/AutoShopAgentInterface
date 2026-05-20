@@ -1,0 +1,6 @@
+interface:
+  display_name: "AutoShop Agent Interface"
+  short_description: "Operate AutoShop Lite ST projects through a bundled CLI."
+  default_prompt: "Use $autoshop-agent-interface to export, import, or refresh an AutoShop Lite ST program."
+policy:
+  allow_implicit_invocation: false
