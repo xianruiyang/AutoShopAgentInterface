@@ -27,6 +27,8 @@ CLI 写回 ST 时只替换这个最终文本块，并保留其余二进制内容
 
 `workspace apply` 会优先根据 `globalVariableRows` 重建 `.gvt` 内部变量行数组，并复用已有样本行的隐藏类型/标志字段。未确认的新字段不要直接伪造；保留 `contentBase64` 作为字节级兜底。
 
+当前已采样的 `STRING<128>` 格式把显式 `dataType` 保存为最后一个变量记录之后的尾部字符串，而不是记录内部字段。因此编辑 `globalVariableRows` 时必须让带 `dataType` 的行保持最后；新增 BOOL 等普通变量应插入到它之前。CLI 会在 dry-run/apply 阶段拒绝把带 `dataType` 的行写在中间，以避免 AutoShop 重新打开后变量表读空。
+
 ## 编码
 
 工程内嵌 ST 文本默认按 GB2312/CP936 处理。
