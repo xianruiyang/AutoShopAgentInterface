@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：autoshop-agent.exe v0.8.13。
+适用版本：autoshop-agent.exe v0.8.14。
 
 本文只记录当前 CLI 的使用方式、能力边界和安全约束，不记录开发计划。
 
@@ -11,7 +11,7 @@
 - 文件编辑主流程是 workspace export 和 workspace apply：先把 AutoShop 工程按软件工程树导出成可编辑文件夹，修改文件夹里的 .st.txt 或 JSON，再统一应用回工程。
 - 在 D:\program\PLC 当前工作区，项目映射固定使用 D:\program\PLC\AutoShopAgentInterfaceWork\current-export；临时验证目录放在 D:\program\PLC\AutoShopAgentInterfaceWork\archive 下。不要在根目录生成 project001-* 映射目录，也不要把 workspace 或 smoke 工程放进 AutoShopAgentInterface skill 文件夹。
 - workspace apply 实际写入后会立即从工程文件回读并比对内容 SHA；JSON 输出中的 verified=true 和 readBackSha256 表示该项已经回读确认。
-- .ST 写回只支持既有 POU 容器。workspace 里的 编程/程序块/*.st.txt 会写回对应 .ST 容器的 LiteST 文本块。
+- pou add 可在文件层新增 LiteST POU：创建 .ST 容器，更新 folder.txt 的 PROG/FB/FC 区域，并同步 .hcp 中 FileType=80 的 POU 登记；workspace 里的 编程/程序块、编程/功能块(FB)、编程/函数(FC) 下现有 .st.txt 用于写回对应 .ST 容器的 LiteST 文本块。
 - 配置、监控、交叉引用、元件使用表等未解析的私有二进制内容会以 JSON 包装文件导出，字段包含来源、SHA 和 contentBase64。全局变量/变量表/变量表.gvt 若能识别，会导出为专用语义 JSON：format=autoshop-agent-global-variable-table.v1，kind=global-variable-table，用户只编辑 variables 数组，workspace apply 会根据当前工程里的 .gvt 模板重建私有二进制。变量记录支持 BOOL、BYTE、INT、DINT、REAL、ARRAY、IP、STRING/STRING<...>、自定义结构体和以 _s/_u 开头的系统结构/联合类型；STRING、ARRAY 和结构体等带显式 dataType 的行可位于任意位置。变量记录的 powerRetain 使用 保持/不保持，networkAccess 使用 私有/公有/输入/输出，对应 AutoShop 变量表中的 掉电保持 和 网络公开 列。
 - 全局变量/结构体/*.stru 若能识别，会导出为 kind=struct-definition 的语义 JSON，编辑 definition.members 后由 workspace apply 重建 .stru。在 全局变量/结构体 目录新增符合 autoshop-agent-struct-definition.v1 的 *.stru.json，且 sourceRelative 指向新的 .stru 文件时，workspace apply 会创建新的自定义结构体文件，并同步维护 .hcp 工程索引中的 FileType=31 结构体文件登记；如果工程里已有未登记的 .stru，workspace apply 也会补齐 project-index 变更。全局变量/功能块实例/功能块实例.fbi 若能识别，会导出为 kind=fb-instance-table 的语义 JSON，编辑 instances 后由 workspace apply 重建 .fbi。
 - var table、project node、pou 等细粒度命令保留为底层/兼容命令；正常文件编辑优先使用 workspace export/apply。
@@ -55,7 +55,7 @@
     autoshop-agent.exe workspace export --project <dir> --out <workspace-dir> [--force]
     autoshop-agent.exe workspace apply --project <dir> --in <workspace-dir> [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh]
 
-导出的文件夹按 AutoShop 工程树排布。代码改 编程/程序块/*.st.txt；全局变量表改 全局变量/变量表/变量表.gvt.json 里的 variables 数组；结构体改 全局变量/结构体/*.stru.json 里的 definition.members，也可以在该目录新增新的 *.stru.json 来创建自定义结构体；功能块实例改 全局变量/功能块实例/功能块实例.fbi.json 里的 instances。不需要也不应手工编辑 .gvt/.stru/.fbi 或 contentBase64。workspace apply 会自动检查 .stru 与 .hcp 工程索引一致性，JSON 输出中 kind=project-index 表示写入了工程索引。写回前建议先执行 workspace apply --dry-run --format json。
+导出的文件夹按 AutoShop 工程树排布。代码改 编程/程序块、编程/功能块(FB)、编程/函数(FC) 下的 *.st.txt；全局变量表改 全局变量/变量表/变量表.gvt.json 里的 variables 数组；结构体改 全局变量/结构体/*.stru.json 里的 definition.members，也可以在该目录新增新的 *.stru.json 来创建自定义结构体；功能块实例改 全局变量/功能块实例/功能块实例.fbi.json 里的 instances。不需要也不应手工编辑 .gvt/.stru/.fbi 或 contentBase64。workspace apply 会自动检查 .stru 与 .hcp 工程索引一致性，JSON 输出中 kind=project-index 表示写入了工程索引。写回前建议先执行 workspace apply --dry-run --format json。
 
 本工作区示例固定路径：
 
@@ -85,7 +85,7 @@
     autoshop-agent.exe pou export-all --project <dir> --out <dir>
     autoshop-agent.exe pou import --project <dir> --name MAIN --in MAIN.st.txt [--dry-run] [--refresh]
     autoshop-agent.exe pou rename --project <dir> --from OLD --to NEW
-    autoshop-agent.exe pou add --project <dir> --name SBR_002 --type main|subprogram|interrupt|fb|fc --language litest|ld|sfc
+    autoshop-agent.exe pou add --project <dir> --name SBR_002 --type program|subprogram|interrupt|fb|fc [--text <litest>] [--dry-run] [--allow-open-project] [--no-backup]
     autoshop-agent.exe pou remove --project <dir> --name SBR_002
 
 ### st
