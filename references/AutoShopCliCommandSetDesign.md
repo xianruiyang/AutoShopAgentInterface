@@ -2,7 +2,7 @@
 
 状态：设计文档 + 当前实现状态记录。本文中的“目标命令”仍表示长期接口；“当前已实现”只表示随包 `scripts/autoshop-agent.exe` 的离线能力。
 
-## 当前实现状态（v0.3.0）
+## 当前实现状态（v0.4.0）
 
 当前 exe 已实现以下无 PLC 真机可用能力：
 
@@ -19,17 +19,19 @@
 - `trace list/add/remove/export`，只维护 `.autoshop-agent/traces.json` 本地侧车定义，不启动 PLC 采样
 - 兼容旧命令：`list`、`export`、`import`、`windows`、`refresh`
 
-当前 exe 对以下真实设备或 AutoShop 内部能力只提供安全占位，不会连接 PLC、扫描网段、打开 USB、RUN/STOP、下载、写设备或修改通讯/运动配置：
+当前 exe 对以下真实设备或 AutoShop 内部能力提供默认 `simulator` 后端实现；命令会执行、保存模拟状态或产出模拟文件，但不会连接 PLC、扫描网段、打开 USB、RUN/STOP 真实设备、下载真实设备、写真实设备或修改 AutoShop 私有工程元数据：
 
-- `target` 除 `scan` 返回空列表外均为占位；`target scan` 也不会发起网络或 USB 探测
-- `online`
-- `monitor`
+- `target scan/connect/info/login/logout/run/stop/mode/download/upload/download-file/upload-updown`
+- `online enter/status/patch/commit/exit/compare`
+- `monitor read/write/watch/memory save/load/recipe save/apply`
 - `trace start/stop`
 - `comm` 的写入、扫描和在线状态子命令
-- `motion`
+- `motion axis/group/cam/hsc` 的 list/add/set/status/import/export 类子命令
 - `build compile/down/updown`
 - `pou add/remove/rename` 已有结构化计划输出，但不会修改工程元数据
-- `var import/bind` 只返回安全占位，不修改变量表
+- `var import/bind` 记录到 simulator 状态，不修改 AutoShop 变量表
+
+显式指定 `--backend hardware` 时，当前版本会拒绝并提示硬件后端尚未实现。真机接入时应替换后端，不改 CLI 指令形状。
 
 注意：`project backup` 读取当前工程文件。如果 AutoShop 正打开工程且某些文件被独占锁定，备份会失败；需要关闭 AutoShop 或对离线副本执行备份。
 

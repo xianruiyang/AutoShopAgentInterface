@@ -27,6 +27,7 @@ go test ./...
 - `comm serial/ethernet show`
 - `trace add/list/export`
 - `target/online/monitor/comm/motion/build` 的安全占位 JSON
+- `target/online/monitor/comm/motion/build` 的 simulator 后端执行结果，要求 `implemented=true` 且 `safe=true`
 
 ## 真机调试用例
 
@@ -39,7 +40,7 @@ $env:AUTOSHOP_AGENT_HARDWARE_PROFILE = "bench"
 go test ./... -run Hardware -v
 ```
 
-当前版本的硬件命令仍是安全占位，因此真机测试启用后会在发现占位实现时失败。这样做是故意的：只有在后续真正实现 PLC 通讯、模式读取、监控读取等能力后，才允许这些测试通过。
+当前版本默认使用 simulator 后端。真机测试启用后应显式验证硬件后端；如果硬件后端仍未实现，测试会失败。这样做是故意的：只有在后续真正实现 PLC 通讯、模式读取、监控读取等能力后，才允许这些测试通过。
 
 ## 真机测试前置条件
 

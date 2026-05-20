@@ -20,7 +20,8 @@ scripts/autoshop-agent.exe
 ## 能力边界
 
 - 当前版本面向无 PLC 真机环境，默认只做本地文件、LiteST 文本、AutoShop UI 窗口操作和安全的侧车文件。
-- `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 不会扫描网段、连接 USB、RUN/STOP、下载工程或写设备；其中部分 `show/list` 子命令只列出本地工程文件。
+- `target`、`online`、`monitor`、`comm`、`motion` 以及 `build compile/down/updown` 已有默认 `simulator` 后端实现，可执行并产出结构化状态或文件；不会扫描网段、连接 USB、RUN/STOP 真实 PLC、下载真实设备或写真实设备。
+- 如显式指定 `--backend hardware`，当前版本会拒绝并提示硬件后端尚未实现；真机接入应复用同一命令接口。
 - 写回 `.ST` 容器只支持既有程序文件；不要用 CLI 新增、删除或重命名 POU，除非后续已经明确工程元数据格式。
 - 外部写回后，AutoShop 已打开编辑窗口不会自动刷新；需要用 `ui refresh --program <name>` 或旧别名 `refresh --program <name>` 关闭并重新打开对应窗口。
 
@@ -108,6 +109,18 @@ Trace 本地侧车定义，不启动 PLC 采样：
 ```powershell
 .\scripts\autoshop-agent.exe target scan --format json
 .\scripts\autoshop-agent.exe monitor read --profile bench --device D100 --format json
+```
+
+全命令 simulator 后端示例：
+
+```powershell
+.\scripts\autoshop-agent.exe target connect --profile sim --format json
+.\scripts\autoshop-agent.exe target run --profile sim --yes --format json
+.\scripts\autoshop-agent.exe monitor write --device D100 --value 123 --yes --format json
+.\scripts\autoshop-agent.exe build down --project D:\program\PLC\project001-copy --out D:\tmp\program.down --format json
+.\scripts\autoshop-agent.exe online enter --profile sim --project D:\program\PLC\project001-copy --format json
+.\scripts\autoshop-agent.exe comm ethercat scan --profile sim --format json
+.\scripts\autoshop-agent.exe motion axis add --project D:\program\PLC\project001-copy --name Axis1 --format json
 ```
 
 ## 兼容别名
