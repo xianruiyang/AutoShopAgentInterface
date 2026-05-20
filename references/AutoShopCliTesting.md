@@ -20,6 +20,7 @@ go test ./...
 
 - ST 容器导出/写回 round-trip
 - `project check/info/archive pack/archive unpack`
+- `project node list/info/export/import --dry-run`
 - `pou list/export/import --dry-run/add/remove/rename`
 - `st lint/parse/refs/instruction`
 - `config init/get/set/profile`

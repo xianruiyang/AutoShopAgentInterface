@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe` v0.5.0。
+适用版本：`autoshop-agent.exe` v0.6.0。
 
 可执行文件：
 
@@ -16,6 +16,7 @@ scripts/autoshop-agent.exe
 - 显式指定 `--backend hardware` 时，当前版本会拒绝执行并提示硬件后端尚未实现。
 - `.ST` 写回只支持既有 POU 容器。`pou add/remove/rename` 只输出结构化计划，不修改 AutoShop 工程元数据。
 - `var table` 支持系统变量表、结构体、软元件表、功能块实例和变量表的表级内容操作：列出、查看信息、原始/JSON/HEX/Base64 导出、带校验和备份的导入替换、按工程树路径刷新窗口。当前版本不逐行反序列化这些私有二进制表。
+- `project node` 支持配置、变量表、监控、交叉引用、元件使用表和 Trace 等工程树节点的表级内容操作。一个节点对应多个工程文件时，默认用 ZIP 导出/导入。
 - 外部写回后，AutoShop 已打开的编辑窗口不会自动刷新。需要执行 `ui refresh --program <name>` 或在 `pou import` 时加 `--refresh`。
 - `project backup` 会读取工程文件。如果 AutoShop 独占锁定 `.hcp` 等文件，备份可能失败，应关闭 AutoShop 或对离线副本操作。
 
@@ -93,9 +94,36 @@ autoshop-agent.exe project backup --project <dir> --out <zip|dir>
 autoshop-agent.exe project archive pack --project <dir> --out <zip>
 autoshop-agent.exe project archive unpack --in <zip> --out <dir>
 autoshop-agent.exe project compare --left <project> --right <project|target> [--detail]
+autoshop-agent.exe project node list --project <dir> [--category config|monitor|report|trace|variable|all]
+autoshop-agent.exe project node info --project <dir> --name ethercat|com0|monitor-main|cross-reference
+autoshop-agent.exe project node export --project <dir> --name ethercat --out ethercat.zip [--as auto|binary|json|zip]
+autoshop-agent.exe project node import --project <dir> --name ethercat --in ethercat.zip [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh]
+autoshop-agent.exe project node refresh --project <dir> --name ethercat
 ```
 
 `archive pack/unpack` 使用 `autoshop-agent` 自有 ZIP 归档格式，不声称等同 AutoShop 官方 `.hclib`。
+
+`project node` 当前内置映射：
+
+```text
+配置/输入滤波             -> Config.sdt
+配置/模块配置             -> h5u_moduleCfg.data
+配置/电子凸轮             -> Ecam.tr
+配置/运动控制轴           -> Config.sdt
+配置/轴组设置             -> Config.sdt
+配置/EtherCAT             -> EtherCat.dat, EtherCat.tmp, EtherCat.datBAK, etherCat.data, SYS_ETHERCAT.ecgvt, ecttrans.foid
+配置/COM0                 -> PortConfig.cfg, _SYS_COM.svt, _SYS_COM_SAVE.svt
+配置/CAN(CANLink)         -> _SYS_CAN.svt
+配置/以太网               -> _SYS_ETHERNET.svt, TcpModbusConfig.cfg
+配置/EtherNet/IP          -> SYS_EIP.eIPgvt
+变量监控表/MAIN           -> MAIN.mon
+变量监控表                -> H530QUICKMONTABLE.qmt
+交叉引用表                -> CrossTable.crs
+元件使用表                -> ElemUseInfo.esi
+Trace                     -> 当前 project001 未发现原生 Trace 内容文件；支持窗口刷新
+```
+
+系统变量表和全局变量表节点也会出现在 `project node list --category variable` 中；逐表查看、HEX/Base64 导出等更细操作继续使用 `var table` / `var system`。
 
 ## `pou`
 
