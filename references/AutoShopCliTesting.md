@@ -19,7 +19,7 @@ go test ./...
 覆盖范围：
 
 - ST 容器导出/写回 round-trip
-- `workspace export/apply`：导出工程镜像文件夹，修改 `编程/程序块/MAIN.st.txt` 和语义 JSON，dry-run 后应用回工程，并检查每个写入项 `verified=true` 与 `readBackSha256`
+- `workspace export/apply`：导出工程镜像文件夹，修改 `编程/程序块/MAIN.st.txt` 和语义 JSON，dry-run 后应用回工程，并检查每个写入项 `verified=true` 与 `readBackSha256`；运动控制轴使用 `配置/运动控制轴/_node.config.json` 的 `motionAxis.axes`，在副本工程上至少验证 `parameters` 写回 `EtherCat.dat/tmp` 后可重新导出读到新值。
 - `全局变量/变量表/变量表.gvt.json` 的专用 `variables` 语义导出、未改动逐字节重建、按内部变量行数组新增 BOOL 后回读解析，以及 BOOL、BYTE、INT、DINT、REAL、ARRAY、IP、STRING<128>、系统结构体、自定义结构体等样本回读
 - `全局变量/结构体/*.stru.json` 的 `definition.members` 语义导出、未改动逐字节重建、新增成员后回读解析，以及 workspace 中新增 `*.stru.json` 后创建新结构体文件、同步 `.hcp` 工程索引并配套创建结构体变量的回读验证
 - `.hcp` 工程索引的 AutoShop UCode 加密/解密 round-trip，以及结构体 `FileType=31` 登记和 `MaxFileID` 更新
