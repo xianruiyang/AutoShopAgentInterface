@@ -1,6 +1,6 @@
-# AutoShop Agent CLI 指令文档
+﻿# AutoShop Agent CLI 指令文档
 
-适用版本：autoshop-agent.exe v0.8.33。
+适用版本：autoshop-agent.exe v0.8.34。
 
 本文只记录当前 CLI 的使用方式、能力边界和安全约束，不记录开发计划。
 
@@ -56,7 +56,7 @@
     autoshop-agent.exe workspace export --project <dir> --out <workspace-dir> [--force]
     autoshop-agent.exe workspace apply --project <dir> --in <workspace-dir> [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh]
 
-运动控制轴参数位于 配置/运动控制轴/_node.config.json 的 motionAxis.axes。优先编辑每个轴的 parameters；uiRecords 和 compilerRecords 保留底层记录映射，供未完全命名字段按 valueType/value 回写。当前支持修改既有轴参数并同步写回 EtherCat.dat、EtherCat.tmp、EtherCat.datBAK；新增/删除轴暂不承诺。模式/参数设置中的 encoderMode 使用 增量模式/绝对模式，axisMotionMode 使用 线性模式/旋转模式，softwareLimitEnabled 为软件限位使能布尔值。原点返回设置已确认的下拉项可直接用中文枚举编辑：homeOriginSignal、homeZSignal、homePositiveLimit、homeNegativeLimit 使用 未分配/使用/不使用，homeReturnDirection、homeInputDetectionDirection 使用 未分配/正向/负向。workspace apply 会拒绝正限位和负限位同时为 使用；对已由样本确认的下拉项组合，会自动同步 homeMethodNumber。
+运动控制轴参数位于 配置/运动控制轴/_node.config.json 的 motionAxis.axes。优先编辑每个轴的 parameters；uiRecords 和 compilerRecords 保留底层记录映射，供未完全命名字段按 valueType/value 回写。当前支持修改既有轴参数并同步写回 EtherCat.dat、EtherCat.tmp、EtherCat.datBAK；新增/删除轴暂不承诺。模式/参数设置中的 encoderMode 使用 增量模式/绝对模式，axisMotionMode 使用 线性模式/旋转模式，softwareLimitEnabled 为软件限位使能布尔值。为匹配 AutoShop 手动保存行为，axisMotionMode=旋转模式 时 workspace apply 会同步将 ignoreLimitAfterErrorStop 归一化为 true。原点返回设置已确认的下拉项可直接用中文枚举编辑：homeOriginSignal、homeZSignal、homePositiveLimit、homeNegativeLimit 使用 未分配/使用/不使用，homeReturnDirection、homeInputDetectionDirection 使用 未分配/正向/负向。workspace apply 会拒绝正限位和负限位同时为 使用；对已由样本确认的下拉项组合，会自动同步 homeMethodNumber。
 
 EtherNet/IP 参数位于 配置/EtherNet/IP/_node.config.json 的 ethernetIP。producerTags 是生产者标签，serverMessageTags 是服务消息标签，adapter.connections 是 Adapter 连接列表；每条连接下 outputDatasets/inputDatasets 分别映射输出/输入数据集，支持修改名称、数据类型、位长度和关联变量名。
 
