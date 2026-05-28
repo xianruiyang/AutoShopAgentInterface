@@ -1,6 +1,6 @@
 ﻿# AutoShop Agent CLI 指令文档
 
-适用版本：autoshop-agent.exe v0.8.34。
+适用版本：autoshop-agent.exe v0.8.35。
 
 本文只记录当前 CLI 的使用方式、能力边界和安全约束，不记录开发计划。
 
