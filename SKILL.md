@@ -52,6 +52,8 @@ D:\program\PLC\AutoShopAgentInterfaceWork\current-export
 
 全局变量表位于 `全局变量/变量表/变量表.gvt.json`，优先编辑其中的 `variables` 数组，不要手工编辑 `.gvt` 或伪造 `contentBase64`。输入滤波参数位于 `配置/输入滤波/_node.config.json` 的 `inputFilter.parameters`；模块配置槽位位于 `配置/模块配置/_node.config.json` 的 `moduleConfig.modules`，其中模块内页面参数优先编辑每个槽位的 `moduleParameters`；运动控制轴位于 `配置/运动控制轴/_node.config.json` 的 `motionAxis.axes`，优先编辑 `parameters`，模式/参数设置可改 `encoderMode`、`axisMotionMode`、`softwareLimitEnabled`，`encoderMode` 会同步 `encoderModeEffective`、`encoderModeLinkedFlag`、可见 UI 记录和 `ignoreLimitAfterErrorStop` 联动值，`axisMotionMode` 也会自动同步 `ignoreLimitAfterErrorStop`（增量或旋转为 `true`、绝对+线性为 `false`），但不强行改 AutoShop 手动保存可能保留旧值的 `encoderModeLegacy` compilerRecord；原点返回下拉项使用中文枚举，正/负限位不能同时为 `使用`，已确认组合会自动同步 `homeMethodNumber`；EtherNet/IP 位于 `配置/EtherNet/IP/_node.config.json` 的 `ethernetIP`，优先编辑生产者标签、服务消息标签、Adapter 连接和 I/O 数据集；EtherCAT 常规参数位于 `配置/EtherCAT/_node.config.json` 的 `ethercat.parameters`；其他配置树节点位于 `配置/<节点名>/_node.config.json`，必要时改对应文件的 `contentHex` 或 `contentBase64`。已按当前样本验证 BOOL、BYTE、INT、DINT、REAL、ARRAY、IP、STRING/STRING<...>、自定义结构体、以 _s/_u 开头的系统结构/联合类型，以及 `powerRetain` 和 `networkAccess`。
 
+运动控制轴单位换算页的 `reverseDirection` 对应 AutoShop “反向”复选框；CLI 会同时同步 `0x80000118` 可见复选框位和 `0x80000117` 联动标志。`pulsesPerRevolution` 用十进制数写入，AutoShop 里的 `16#1000000` 对应 JSON 值 `16777216`。
+
 检查工程和 ST 容器：
 
 ```powershell
