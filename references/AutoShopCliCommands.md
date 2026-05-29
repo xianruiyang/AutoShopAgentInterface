@@ -1,6 +1,6 @@
 ﻿# AutoShop Agent CLI 指令文档
 
-适用版本：autoshop-agent.exe v0.8.40。
+适用版本：autoshop-agent.exe v0.8.41。
 
 本文只记录当前 CLI 的使用方式、能力边界和安全约束，不记录开发计划。
 
@@ -56,7 +56,7 @@
     autoshop-agent.exe workspace export --project <dir> --out <workspace-dir> [--force]
     autoshop-agent.exe workspace apply --project <dir> --in <workspace-dir> [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh]
 
-运动控制轴参数位于 配置/运动控制轴/_node.config.json 的 motionAxis.axes。优先编辑每个轴的 parameters；uiRecords 和 compilerRecords 保留底层记录映射，供未完全命名字段按 valueType/value 回写。当前支持修改既有轴参数并同步写回 EtherCat.dat、EtherCat.tmp、EtherCat.datBAK；新增/删除轴暂不承诺。模式/参数设置中的 encoderMode 使用 增量模式/绝对模式，并会同步 AutoShop 实际保存的 encoderModeEffective 与 encoderModeLinkedFlag 编译记录、可见 UI 记录和 ignoreLimitAfterErrorStop 联动值；axisMotionMode 使用 线性模式/旋转模式，softwareLimitEnabled 为软件限位使能布尔值。为匹配 AutoShop 手动保存行为，axisMotionMode 或 encoderMode 改动时会同步 ignoreLimitAfterErrorStop：增量模式或旋转模式为 true，绝对+线性模式为 false。AutoShop 手动保存可能保留旧的 encoderModeLegacy compilerRecord；语义 apply 不强行改这个旧编译记录。原点返回设置已确认的下拉项可直接用中文枚举编辑：homeOriginSignal、homeZSignal、homePositiveLimit、homeNegativeLimit 使用 未分配/使用/不使用，homeReturnDirection、homeInputDetectionDirection 使用 未分配/正向/负向。workspace apply 会拒绝正限位和负限位同时为 使用；对已由样本确认的下拉项组合，会自动同步 homeMethodNumber。
+运动控制轴参数位于 配置/运动控制轴/_node.config.json 的 motionAxis.axes。优先编辑每个轴的 parameters；uiRecords 和 compilerRecords 保留底层记录映射，供未完全命名字段按 valueType/value 回写。当前支持修改既有轴参数并同步写回 EtherCat.dat、EtherCat.tmp、EtherCat.datBAK；新增/删除轴暂不承诺。基本设置中的 virtualAxisMode 对应“虚轴模式”，autoMappingEnabled 对应“自动映射”。模式/参数设置中的 encoderMode 使用 增量模式/绝对模式，并会同步 AutoShop 实际保存的 encoderModeEffective 与 encoderModeLinkedFlag 编译记录、可见 UI 记录和 ignoreLimitAfterErrorStop 联动值；axisMotionMode 使用 线性模式/旋转模式，softwareLimitEnabled 为软件限位使能布尔值。为匹配 AutoShop 手动保存行为，axisMotionMode 或 encoderMode 改动时会同步 ignoreLimitAfterErrorStop：增量模式或旋转模式为 true，绝对+线性模式为 false。AutoShop 手动保存可能保留旧的 encoderModeLegacy compilerRecord；语义 apply 不强行改这个旧编译记录。原点返回设置已确认的下拉项可直接用中文枚举编辑：homeOriginSignal、homeZSignal、homePositiveLimit、homeNegativeLimit 使用 未分配/使用/不使用，homeReturnDirection、homeInputDetectionDirection 使用 未分配/正向/负向。workspace apply 会拒绝正限位和负限位同时为 使用；对已由样本确认的下拉项组合，会自动同步 homeMethodNumber。
 
 单位换算设置中的 reverseDirection 表示“反向”复选框；workspace apply 会同步 AutoShop 手动保存确认的 0x80000118 可见复选框位和 0x80000117 联动标志。gearDeviceEnabled 表示“使用变速装置”。pulsesPerRevolution 使用十进制数表示，AutoShop 中的 16#1000000 对应 JSON 值 16777216。
 
