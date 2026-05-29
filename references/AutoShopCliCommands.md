@@ -1,248 +1,463 @@
-﻿# AutoShop Agent CLI 指令文档
+# AutoShop Agent CLI 指令文档
 
-适用版本：autoshop-agent.exe v0.8.41。
+适用版本：`autoshop-agent.exe v0.8.42`。
 
-本文只记录当前 CLI 的使用方式、能力边界和安全约束，不记录开发计划。
+本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
-## 能力边界
+## 1. 首选工作流
 
-- 默认后端为 simulator。涉及 PLC、在线监控、通讯扫描、运动控制和构建交付的命令会执行并保存模拟状态或生成模拟文件，但不会连接、扫描、运行、停止、下载、上传或写入真实 PLC。
-- 显式指定 --backend hardware 时，当前版本会拒绝执行并提示硬件后端尚未实现。
-- 文件编辑主流程是 workspace export 和 workspace apply：先把 AutoShop 工程按软件工程树导出成可编辑文件夹，修改文件夹里的 .st.txt 或 JSON，再统一应用回工程。工程内容的新增、删除、修改应通过 workspace JSON/文本镜像应用完成，不应为每类文件操作继续增加独立指令。
-- 在 D:\program\PLC 当前工作区，项目映射固定使用 D:\program\PLC\AutoShopAgentInterfaceWork\current-export；临时验证目录放在 D:\program\PLC\AutoShopAgentInterfaceWork\archive 下。不要在根目录生成 project001-* 映射目录，也不要把 workspace 或 smoke 工程放进 AutoShopAgentInterface skill 文件夹。
-- workspace apply 实际写入后会立即从工程文件回读并比对内容 SHA；JSON 输出中的 verified=true 和 readBackSha256 表示该项已经回读确认。
-- POU 文件层能力已沉到 workspace apply 内部使用：程序块/中断是 .ST 容器并登记 FileType=80，功能块是 .FB 容器并登记 FileType=81/ProgType=7，函数是 .FC 容器并登记 FileType=82/ProgType=8；在 编程/程序块、编程/功能块(FB)、编程/函数(FC) 下新增 *.pou.json 可由 workspace apply 创建对应 POU 文件、维护 folder.txt，并同步 .hcp 工程索引。pou add 属于底层兼容/诊断入口，不作为推荐编辑流程。
-- 配置树节点会额外导出为 kind=config-node 的 _node.config.json，覆盖输入滤波、模块配置、电子凸轮、运动控制轴、轴组设置、EtherCAT、COM0、CAN(CANLink)、以太网、EtherNet/IP 等节点。每个节点 JSON 的 files 数组列出真实工程文件，包含 sourceRelative、SHA、contentHex、contentBase64 和可读字符串预览；修改 contentHex 或 contentBase64 后，workspace apply 会写回对应工程文件并回读校验。输入滤波节点若能识别 Config.sdt，会额外导出 inputFilter.parameters 语义参数；当前已确认字段为 normalX0ToX7Ms、highSpeedX0ToX3_100ns、highSpeedX4ToX7Us。模块配置节点若能识别 h5u_moduleCfg.data，会额外导出 moduleConfig.modules 语义槽位数组；每个槽位包含 slot、model、identity、moduleTypeCode、instance、ioSignals、moduleParameters 和用于保底回写的 parametersHex，workspace apply 会按 modules 重建 h5u_moduleCfg.data；已知 GL10 模块可只填 model 让 CLI 使用样本默认参数生成，ioSignals 可修改已有 X/Y 地址但数量必须与该模块参数中的地址字段一致。moduleParameters 把模块内重复 UI 页面映射成数组：4DA/4AD 是同一通道页重复 4 次，8TC/4TC/4PT 的 通道X-通道Y 是同一通道 schema 的分组数组；已确认字段可直接编辑，尚未拆清的基本配置位域保留 rawCode，未知私有字节继续由 parametersHex 保真兜底。EtherCAT 节点若能识别 EtherCat.dat，会额外导出 ethercat.parameters 语义参数；当前只允许编辑已确认的 常规设置 字段 cycleTimeUs、syncOffsetPercent、autoRestartSlave、aliasEnabled。其他可解析私有记录只在 ethercat.records 中以 parameter_0x... 展示，editable=false，workspace apply 会拒绝修改这些未确认语义的私有记录，避免破坏 AutoShop 数据结构。已确认参数 apply 会重建并同步写回 EtherCat.dat、EtherCat.tmp、EtherCat.datBAK，并在原文件带有效尾部 CRC32 时自动重算该校验。状态 页里的循环时间、执行时间、丢帧次数等为在线任务监控值，不作为离线工程配置承诺写回。COM0 等 Windows 保留设备名会在镜像目录中使用安全名称（例如 COM0_），JSON 内的 treePath 仍保持 AutoShop 原始树路径。若两种编码同时被改且内容不一致，会拒绝应用。未解析的监控、交叉引用、元件使用表等私有二进制内容仍以普通 JSON 包装文件导出，字段包含来源、SHA 和 contentBase64。全局变量/变量表/变量表.gvt 若能识别，会导出为专用语义 JSON：format=autoshop-agent-global-variable-table.v1，kind=global-variable-table，用户只编辑 variables 数组，workspace apply 会根据当前工程里的 .gvt 模板重建私有二进制。变量记录支持 BOOL、BYTE、INT、DINT、REAL、ARRAY、IP、STRING/STRING<...>、自定义结构体和以 _s/_u 开头的系统结构/联合类型；STRING、ARRAY 和结构体等带显式 dataType 的行可位于任意位置。变量记录的 powerRetain 使用 保持/不保持，networkAccess 使用 私有/公有/输入/输出，对应 AutoShop 变量表中的 掉电保持 和 网络公开 列。
-- EtherNet/IP 节点若能识别 EIP.dat，会额外导出 ethernetIP 语义配置；producerTags 对应生产者标签，serverMessageTags 对应服务消息标签，adapter.connections 对应 EtherNet/IP Adapter 连接、O->T/T->O 实例与大小、输入/输出数据集 I/O 映射。workspace apply 会重建 EIP.dat 并在原文件带有效尾部 CRC32 时自动重算校验；EIP.data、EIP.datBAK、SYS_EIP.eIPgvt 仍在 files 中保留为真实成员文件映射。
-- 全局变量/结构体/*.stru 若能识别，会导出为 kind=struct-definition 的语义 JSON，编辑 definition.members 后由 workspace apply 重建 .stru。在 全局变量/结构体 目录新增符合 autoshop-agent-struct-definition.v1 的 *.stru.json，且 sourceRelative 指向新的 .stru 文件时，workspace apply 会创建新的自定义结构体文件，并同步维护 .hcp 工程索引中的 FileType=31 结构体文件登记；结构体相关 apply 会顺带补齐工程里已有但未登记的 .stru 的 project-index 变更。全局变量/功能块实例/功能块实例.fbi 若能识别，会导出为 kind=fb-instance-table 的语义 JSON，编辑 instances 后由 workspace apply 重建 .fbi。
-- var table、project node、pou 等细粒度命令只保留为底层/兼容/诊断命令；正常文件编辑必须优先使用 workspace export/apply。
-- 外部写回后，AutoShop 已打开的编辑窗口不会自动刷新。ST/普通树节点可执行 ui refresh --program <name>、ui refresh-path --path <tree-path>，或在 workspace apply / pou import 时加 --refresh。变量表这类工程级缓存需要执行工程级刷新；可用 ui close-project 先记录当前工程、已打开 MDI 窗口和活动窗口并关闭工程，再用 ui restore-project 读取状态文件、重新打开工程文件、恢复窗口并把焦点切回原活动窗口。ui refresh-project 保留为一次性兼容封装。
-- ui screenshot 使用 Win32 PrintWindow 按窗口句柄输出 PNG，不会把 AutoShop 切到前台。目标窗口最小化时可传入 --restore-offscreen：CLI 会把 AutoShop 临时恢复到虚拟屏幕右下角几乎屏幕外，截图后若原来是最小化则立即最小化回去。若传入 --allow-minimized，输出可能为空白，JSON 中的 nonBlank/uniqueProbe 可用于快速判断。
+### 1.1 固定工程映射目录
 
-## 通用格式
+在 `D:\program\PLC` 当前工作区，固定使用：
 
-    autoshop-agent.exe <command> [subcommand] [flags]
+```text
+D:\program\PLC\AutoShopAgentInterfaceWork\current-export
+```
 
-通用参数：
+临时验证目录只放在：
 
-    --config <path>              JSON 配置路径，优先级高于 AUTOSHOP_AGENT_CONFIG。
-    --project <dir|file>         工程目录或工程文件。
-    --profile <name>             配置文件中的连接配置名称。
-    --backend simulator|hardware 后端。默认 simulator；hardware 当前未实现。
-    --format text|json|ndjson    输出格式。默认 text。
-    --dry-run                    只解析和验证，不写文件，不影响 PLC 或 AutoShop。
-    --yes                        对危险操作进行非交互确认。
-    --timeout <duration>         超时时间，例如 30s 或 2m。
-    --log <path>                 写结构化运行日志。
-    --verbose                    输出更多细节。
-    --quiet                      只输出必要结果。
+```text
+D:\program\PLC\AutoShopAgentInterfaceWork\archive
+```
 
-## 指令
+不要在 `D:\program\PLC` 根目录继续生成 `project001-*` 目录，也不要把 workspace、smoke、临时导出放进 `D:\program\PLC\AutoShopAgentInterface` skill 文件夹。
 
-### config
+### 1.2 导出、修改、预检查、应用
 
-    autoshop-agent.exe config init [--config path] [--project dir] [--autoshop-exe path] [--force]
-    autoshop-agent.exe config show [--config path] [--format json]
-    autoshop-agent.exe config validate [--config path]
-    autoshop-agent.exe config set <key> <value> [--config path]
-    autoshop-agent.exe config get <key> [--config path]
-    autoshop-agent.exe config profile add <name> --transport ethernet --ip <ip> [--port <port>]
-    autoshop-agent.exe config profile add <name> --transport usb
-    autoshop-agent.exe config profile list
-    autoshop-agent.exe config profile remove <name>
+```powershell
+D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe workspace export --project D:\program\PLC\project001 --out D:\program\PLC\AutoShopAgentInterfaceWork\current-export --force
+D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\program\PLC\AutoShopAgentInterfaceWork\current-export --dry-run --format json
+D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\program\PLC\AutoShopAgentInterfaceWork\current-export --allow-open-project --format json
+```
 
-### workspace
+`workspace apply` 写入后会立刻从工程文件回读并校验 SHA。JSON 输出中的 `verified=true` 和 `readBackSha256` 表示该项已经实际写回到磁盘工程文件。写回 POU、结构体等会同步 `.hcp` 工程索引，输出中的 `kind=project-index` 表示索引也被更新。
 
-    autoshop-agent.exe workspace export --project <dir> --out <workspace-dir> [--force]
-    autoshop-agent.exe workspace apply --project <dir> --in <workspace-dir> [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh]
+### 1.3 AutoShop UI 刷新边界
 
-运动控制轴参数位于 配置/运动控制轴/_node.config.json 的 motionAxis.axes。优先编辑每个轴的 parameters；uiRecords 和 compilerRecords 保留底层记录映射，供未完全命名字段按 valueType/value 回写。当前支持修改既有轴参数并同步写回 EtherCat.dat、EtherCat.tmp、EtherCat.datBAK；新增/删除轴暂不承诺。基本设置中的 virtualAxisMode 对应“虚轴模式”，autoMappingEnabled 对应“自动映射”。模式/参数设置中的 encoderMode 使用 增量模式/绝对模式，并会同步 AutoShop 实际保存的 encoderModeEffective 与 encoderModeLinkedFlag 编译记录、可见 UI 记录和 ignoreLimitAfterErrorStop 联动值；axisMotionMode 使用 线性模式/旋转模式，softwareLimitEnabled 为软件限位使能布尔值。为匹配 AutoShop 手动保存行为，axisMotionMode 或 encoderMode 改动时会同步 ignoreLimitAfterErrorStop：增量模式或旋转模式为 true，绝对+线性模式为 false。AutoShop 手动保存可能保留旧的 encoderModeLegacy compilerRecord；语义 apply 不强行改这个旧编译记录。原点返回设置已确认的下拉项可直接用中文枚举编辑：homeOriginSignal、homeZSignal、homePositiveLimit、homeNegativeLimit 使用 未分配/使用/不使用，homeReturnDirection、homeInputDetectionDirection 使用 未分配/正向/负向。workspace apply 会拒绝正限位和负限位同时为 使用；对已由样本确认的下拉项组合，会自动同步 homeMethodNumber。
+外部写回后，AutoShop 已打开窗口不一定立即刷新。ST/普通树节点可用 `--refresh`、`ui refresh` 或 `ui refresh-path` 关闭并重开窗口。变量表、模块配置、运动轴等工程级缓存经常需要关闭工程再重新打开工程才能在 AutoShop 里看到磁盘更新。
 
-单位换算设置中的 reverseDirection 表示“反向”复选框；workspace apply 会同步 AutoShop 手动保存确认的 0x80000118 可见复选框位和 0x80000117 联动标志。gearDeviceEnabled 表示“使用变速装置”。pulsesPerRevolution 使用十进制数表示，AutoShop 中的 16#1000000 对应 JSON 值 16777216。
+工程级刷新拆成两步：
 
-EtherNet/IP 参数位于 配置/EtherNet/IP/_node.config.json 的 ethernetIP。producerTags 是生产者标签，serverMessageTags 是服务消息标签，adapter.connections 是 Adapter 连接列表；每条连接下 outputDatasets/inputDatasets 分别映射输出/输入数据集，支持修改名称、数据类型、位长度和关联变量名。
+```powershell
+D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui close-project --project D:\program\PLC\project001 --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
+D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui restore-project --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
+```
 
-导出的文件夹按 AutoShop 工程树排布。程序块代码改 编程/程序块 下的 *.st.txt；新增程序块/中断/功能块(FB)/函数(FC) 时，在对应目录新增 *.pou.json，格式为 autoshop-agent-pou-definition.v1，字段包含 name、type、sourceRelative、language=litest、text；全局变量表改 全局变量/变量表/变量表.gvt.json 里的 variables 数组；结构体改 全局变量/结构体/*.stru.json 里的 definition.members，也可以在该目录新增新的 *.stru.json 来创建自定义结构体；功能块实例改 全局变量/功能块实例/功能块实例.fbi.json 里的 instances；输入滤波参数改 配置/输入滤波/_node.config.json 里的 inputFilter.parameters；模块配置槽位改 配置/模块配置/_node.config.json 里的 moduleConfig.modules，模块内部页面参数优先改每个槽位的 moduleParameters；EtherCAT 常规参数只改 配置/EtherCAT/_node.config.json 里的 ethercat.parameters，editable=false 的 ethercat.records 只读；其他配置树节点可改 配置/<节点名>/_node.config.json 里的 files[].contentHex 或 files[].contentBase64，其中 Windows 保留名会带安全后缀，例如 COM0 节点路径为 配置/COM0_/_node.config.json。不需要也不应手工编辑 .gvt/.stru/.fbi。workspace apply 会自动检查 POU、.stru 与 .hcp 工程索引一致性，JSON 输出中 kind=project-index 表示写入了工程索引。写回前建议先执行 workspace apply --dry-run --format json。
+当前用户使用电脑时不要执行会弹窗、切前台或输入键鼠的 UI 命令。`ui screenshot` 使用 Win32 `PrintWindow`，通常不会切到前台；目标最小化时可用 `--restore-offscreen` 临时移到屏幕边缘截图再最小化回去。
 
-本工作区示例固定路径：
+## 2. 通用格式和参数
 
-    autoshop-agent.exe workspace export --project D:\program\PLC\project001 --out D:\program\PLC\AutoShopAgentInterfaceWork\current-export --force
-    autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\program\PLC\AutoShopAgentInterfaceWork\current-export --dry-run --format json
+```text
+autoshop-agent.exe <command> [subcommand] [flags]
+```
 
-### project
+常用通用参数：
 
-    autoshop-agent.exe project info --project <dir|hcp|hcpp|updown>
-    autoshop-agent.exe project tree --project <dir> [--format json]
-    autoshop-agent.exe project check --project <dir> [--strict]
-    autoshop-agent.exe project backup --project <dir> --out <zip|dir>
-    autoshop-agent.exe project archive pack --project <dir> --out <zip>
-    autoshop-agent.exe project archive unpack --in <zip> --out <dir>
-    autoshop-agent.exe project compare --left <project> --right <project|target> [--detail]
-    autoshop-agent.exe project node list --project <dir> [--category program|config|monitor|report|trace|variable|all]
-    autoshop-agent.exe project node info --project <dir> --name MAIN|program-blocks|fb-folder|ethercat|com0|monitor-main|cross-reference
-    autoshop-agent.exe project node export --project <dir> --name ethercat --out ethercat.zip [--as auto|binary|json|zip]
-    autoshop-agent.exe project node import --project <dir> --name ethercat --in ethercat.zip [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh]
-    autoshop-agent.exe project node refresh --project <dir> --name MAIN|ethercat
+| 参数 | 说明 |
+| --- | --- |
+| `--config <path>` | JSON 配置路径，优先级高于 `AUTOSHOP_AGENT_CONFIG`。 |
+| `--project <dir|file>` | 工程目录或工程文件。 |
+| `--project-text-encoding <encoding>` | 覆盖工程 ST 文本编码；当前 `project001` 默认 `gb2312`。 |
+| `--profile <name>` | 配置文件中的连接配置名。 |
+| `--backend simulator|hardware` | 后端。默认 `simulator`；`hardware` 当前会拒绝执行。 |
+| `--format text|json|ndjson` | 输出格式。自动化调用优先用 `json`。 |
+| `--dry-run` | 只解析和验证，不写文件，不影响 AutoShop 或 PLC。 |
+| `--allow-open-project` | AutoShop 可能打开同一工程时仍允许文件写回。 |
+| `--no-backup` | 不生成备份；默认会备份被覆盖的工程文件。 |
+| `--force` | 允许覆盖已有导出或忽略导出后工程源文件变化等保护。 |
+| `--refresh` | 写回后尝试刷新相关 AutoShop 窗口。 |
+| `--yes` | 对模拟目标命令进行非交互确认。 |
+| `--timeout` / `--timeout-ms` | 超时时间；不同命令使用字符串或毫秒参数。 |
 
-### pou
+默认配置路径：
 
-    autoshop-agent.exe pou list --project <dir> [--format json]
-    autoshop-agent.exe pou show --project <dir> --name MAIN
-    autoshop-agent.exe pou export --project <dir> --name MAIN --out MAIN.st.txt
-    autoshop-agent.exe pou export-all --project <dir> --out <dir>
-    autoshop-agent.exe pou import --project <dir> --name MAIN --in MAIN.st.txt [--dry-run] [--refresh]
-    autoshop-agent.exe pou rename --project <dir> --from OLD --to NEW
-    autoshop-agent.exe pou add --project <dir> --name SBR_002 --type program|subprogram|interrupt|fb|fc [--text <litest>] [--dry-run] [--allow-open-project] [--no-backup]
-    autoshop-agent.exe pou remove --project <dir> --name SBR_002
+```text
+%APPDATA%\AutoShopAgentInterface\config.json
+```
 
-### st
+## 3. Workspace 映射文件
 
-    autoshop-agent.exe st format --in source.st --out source.formatted.st
-    autoshop-agent.exe st lint --in source.st [--target h5u|easy] [--firmware <version>]
-    autoshop-agent.exe st parse --in source.st --format json
-    autoshop-agent.exe st symbols --in source.st --format json
-    autoshop-agent.exe st refs --in source.st --symbol <name>
-    autoshop-agent.exe st scaffold mb-master --out example.st
-    autoshop-agent.exe st scaffold fb-call --name <FB> --out call.st
-    autoshop-agent.exe st instruction search <keyword>
-    autoshop-agent.exe st instruction show <name> [--format json]
+导出的 workspace 按 AutoShop 工程树排布。普通文件编辑只改 workspace 里的 `.st.txt` 或 JSON，再统一 `workspace apply`。
 
-### var
+| AutoShop 树节点 | workspace 文件 | 编辑方式 |
+| --- | --- | --- |
+| 编程/程序块 | `编程/程序块/*.st.txt` | 编辑既有程序块 ST 正文。 |
+| 编程/程序块 | `编程/程序块/*.pou.json` | 新增程序块、子程序或中断；`type=program|subprogram|interrupt`。 |
+| 编程/功能块(FB) | `编程/功能块(FB)/*.pou.json` | 新增 FB；`type=fb`，会创建 `.FB` 并注册 `FileType=81`、`ProgType=7`。 |
+| 编程/函数(FC) | `编程/函数(FC)/*.pou.json` | 新增 FC；`type=fc`，会创建 `.FC` 并注册 `FileType=82`、`ProgType=8`。 |
+| 全局变量/变量表 | `全局变量/变量表/变量表.gvt.json` | 编辑 `variables` 数组；不要手工改 `.gvt`。 |
+| 全局变量/结构体 | `全局变量/结构体/*.stru.json` | 编辑 `definition.members`；新增符合格式的 JSON 可创建结构体。 |
+| 全局变量/功能块实例 | `全局变量/功能块实例/功能块实例.fbi.json` | 编辑 `instances`。 |
+| 配置/输入滤波 | `配置/输入滤波/_node.config.json` | 优先改 `inputFilter.parameters`。 |
+| 配置/模块配置 | `配置/模块配置/_node.config.json` | 优先改 `moduleConfig.modules` 和每槽位 `moduleParameters`。 |
+| 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
+| 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 只改已确认可写的 `ethercat.parameters`。 |
+| 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP` 下的标签、连接和 I/O 数据集。 |
+| 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
 
-    autoshop-agent.exe var list --project <dir> [--scope global|local|system]
-    autoshop-agent.exe var export --project <dir> --out vars.csv|vars.json
-    autoshop-agent.exe var import --project <dir> --in vars.csv|vars.json [--merge|--replace]
-    autoshop-agent.exe var bind --project <dir> --name <var> --device D100
-    autoshop-agent.exe var validate --project <dir>
-    autoshop-agent.exe var system list --project <dir> [--group ethernet|com|can|ecat|motion|info]
-    autoshop-agent.exe var system show --project <dir> --name _SYS_COM
-    autoshop-agent.exe var system export --project <dir> --name _SYS_COM --out _SYS_COM.svt
-    autoshop-agent.exe var system import --project <dir> --name _SYS_COM --in _SYS_COM.svt [--dry-run] [--allow-open-project] [--refresh]
-    autoshop-agent.exe var system refresh --project <dir> --name _SYS_COM
-    autoshop-agent.exe var table list --project <dir> [--category system|global|internal|all] [--all]
-    autoshop-agent.exe var table info --project <dir> --name variable|device|struct|fb-instance|_SYS_COM
-    autoshop-agent.exe var table export --project <dir> --name variable --out 变量表.gvt [--as binary|json|hex|base64]
-    autoshop-agent.exe var table import --project <dir> --name variable --in 变量表.gvt [--dry-run] [--allow-open-project] [--no-backup] [--refresh]
-    autoshop-agent.exe var table refresh --project <dir> --name variable
+Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配置/COM0` 在 workspace 中是 `配置/COM0_/_node.config.json`，JSON 内 `treePath` 仍保留原始树路径。
 
-### build
+## 4. 语义 JSON 字段
 
-    autoshop-agent.exe build check --project <dir>
-    autoshop-agent.exe build compile --project <dir> [--clean] [--format json]
-    autoshop-agent.exe build diagnostics --project <dir> [--format json]
-    autoshop-agent.exe build down --project <dir> --out <file.down> [--include-source] [--retain keep|init]
-    autoshop-agent.exe build updown --project <dir> --out <file.updown> [--include-source] [--retain keep|init]
+### 4.1 POU 定义
 
-### target
+新增 `*.pou.json` 使用：
 
-    autoshop-agent.exe target scan [--transport ethernet|usb]
-    autoshop-agent.exe target connect --profile <name>
-    autoshop-agent.exe target info --profile <name>
-    autoshop-agent.exe target login --profile <name> --password <value>
-    autoshop-agent.exe target logout --profile <name>
-    autoshop-agent.exe target run --profile <name> [--yes]
-    autoshop-agent.exe target stop --profile <name> [--yes]
-    autoshop-agent.exe target mode --profile <name>
-    autoshop-agent.exe target download --profile <name> --project <dir> [--yes]
-    autoshop-agent.exe target upload --profile <name> --out <dir|updown>
-    autoshop-agent.exe target download-file --profile <name> --in <down|updown> [--yes]
-    autoshop-agent.exe target upload-updown --profile <name> --out <file.updown>
+```json
+{
+  "format": "autoshop-agent-pou-definition.v1",
+  "kind": "pou-definition",
+  "name": "JSON_FB_001",
+  "type": "fb",
+  "language": "litest",
+  "encoding": "utf8",
+  "sourceRelative": "JSON_FB_001.FB",
+  "text": "VAR\n    t1 : BOOL := OFF;\nEND_VAR\n"
+}
+```
 
-### online
+`workspace apply` 会创建对应 `.ST`、`.FB` 或 `.FC` 容器，维护 `folder.txt`，并同步 `.hcp` 工程索引。`pou add` 是底层兼容/诊断入口，不是推荐新增流程。
 
-    autoshop-agent.exe online enter --profile <name> --project <dir>
-    autoshop-agent.exe online status --profile <name>
-    autoshop-agent.exe online patch --profile <name> --project <dir> --in <patch-file> [--yes]
-    autoshop-agent.exe online commit --profile <name> [--yes]
-    autoshop-agent.exe online exit --profile <name>
-    autoshop-agent.exe online compare --profile <name> --project <dir> [--format json]
+### 4.2 全局变量表
 
-### monitor
+`变量表.gvt.json` 使用：
 
-    autoshop-agent.exe monitor read --profile <name> --device D100
-    autoshop-agent.exe monitor write --profile <name> --device D100 --value 123 [--yes]
-    autoshop-agent.exe monitor watch --profile <name> --items D100,M0,TEST --interval 100ms --out samples.ndjson
-    autoshop-agent.exe monitor memory save --profile <name> --project <dir> --out snapshot.json
-    autoshop-agent.exe monitor memory load --profile <name> --project <dir> --in snapshot.json [--yes]
-    autoshop-agent.exe monitor recipe save --profile <name> --project <dir> --out recipe.json
-    autoshop-agent.exe monitor recipe apply --profile <name> --project <dir> --in recipe.json [--yes]
+```json
+{
+  "format": "autoshop-agent-global-variable-table.v1",
+  "kind": "global-variable-table",
+  "variables": [
+    {
+      "name": "stubid",
+      "dataType": "BOOL",
+      "initialValue": "OFF",
+      "powerRetain": "保持",
+      "networkAccess": "私有",
+      "comment": ""
+    }
+  ]
+}
+```
 
-### trace
+支持已验证类型：`BOOL`、`BYTE`、`INT`、`DINT`、`REAL`、`ARRAY`、`IP`、`STRING` / `STRING<...>`、自定义结构体、以 `_s` / `_u` 开头的系统结构/联合类型。`powerRetain` 对应“掉电保持”，使用 `保持|不保持`；`networkAccess` 对应“网络公开”，使用 `私有|公有|输入|输出`。
 
-    autoshop-agent.exe trace list --project <dir>
-    autoshop-agent.exe trace add --project <dir> --name <trace> --items D100,D200,TEST
-    autoshop-agent.exe trace start --profile <name> --name <trace>
-    autoshop-agent.exe trace stop --profile <name> --name <trace>
-    autoshop-agent.exe trace export --project <dir> --name <trace> --out trace.csv
-    autoshop-agent.exe trace remove --project <dir> --name <trace>
+### 4.3 结构体和 FB 实例
 
-### diagnose
+结构体 JSON 的关键字段是 `definition.members`，可创建和修改自定义结构体成员。新增结构体时，`sourceRelative` 指向新的 `.stru` 文件，`workspace apply` 会注册 `.hcp` 中 `FileType=31`。
 
-    autoshop-agent.exe diagnose target --profile <name> [--format json]
-    autoshop-agent.exe diagnose logs --profile <name> --out logs.json
-    autoshop-agent.exe diagnose error-code <code> [--domain program|modbus|ethercat|motion|system]
-    autoshop-agent.exe diagnose project --project <dir> [--format json]
-    autoshop-agent.exe diagnose bundle --project <dir> [--profile <name>] --out support.zip
+功能块实例 JSON 的关键字段是 `instances`。编辑后由 `workspace apply` 重建 `.fbi`。
 
-### comm
+### 4.4 输入滤波
 
-    autoshop-agent.exe comm serial show --project <dir>
-    autoshop-agent.exe comm serial set --project <dir> --port COM1 --baud 9600 --data-bits 8 --parity none --stop-bits 1
-    autoshop-agent.exe comm modbus-rtu master add --project <dir> --name <name> --port COM1 --addr <id>
-    autoshop-agent.exe comm modbus-tcp master add --project <dir> --name <name> --ip <ip> --port 502
-    autoshop-agent.exe comm ethernet show --project <dir>
-    autoshop-agent.exe comm ethernet set-ip --profile <name> --ip <ip> --mask <mask> --gateway <gateway> [--yes]
-    autoshop-agent.exe comm can show --project <dir>
-    autoshop-agent.exe comm canopen import-eds --project <dir> --in <file.eds>
-    autoshop-agent.exe comm ethercat import-xml --project <dir> --in <file.xml>
-    autoshop-agent.exe comm ethercat scan --profile <name>
-    autoshop-agent.exe comm ethercat status --profile <name>
+`inputFilter.parameters` 当前已确认字段：
 
-### motion
+| 字段 | AutoShop 页面含义 |
+| --- | --- |
+| `normalX0ToX7Ms` | 普通输入滤波 `X0-X7`，单位 `ms`。 |
+| `highSpeedX0ToX3_100ns` | 高速输入滤波 `X0-X3`，单位 `100ns`。 |
+| `highSpeedX4ToX7Us` | 高速输入滤波 `X4-X7`，单位 `us`。 |
 
-    autoshop-agent.exe motion axis list --project <dir>
-    autoshop-agent.exe motion axis add --project <dir> --name Axis1 --type ethercat|pulse
-    autoshop-agent.exe motion axis set --project <dir> --name Axis1 --param <key=value>
-    autoshop-agent.exe motion axis status --profile <name> --name Axis1
-    autoshop-agent.exe motion group list --project <dir>
-    autoshop-agent.exe motion group add --project <dir> --name Group1 --axes Axis1,Axis2
-    autoshop-agent.exe motion cam import --project <dir> --name Cam1 --in cam.csv
-    autoshop-agent.exe motion cam export --project <dir> --name Cam1 --out cam.csv
-    autoshop-agent.exe motion hsc list --project <dir>
-    autoshop-agent.exe motion hsc add --project <dir> --name Counter1 --mode linear|rotary
+### 4.5 模块配置
 
-### ui
+`moduleConfig.modules` 是槽位数组。常用字段：
 
-    autoshop-agent.exe ui windows
-    autoshop-agent.exe ui refresh --program MAIN
-    autoshop-agent.exe ui refresh-path --path "全局变量/变量表" --title 变量表
-    autoshop-agent.exe ui close-project --project <dir> [--state project-state.json] [--dry-run] --format json
-    autoshop-agent.exe ui restore-project --state project-state.json [--dry-run] --format json
-    autoshop-agent.exe ui restore-project --project <dir> [--dry-run] --format json
-    autoshop-agent.exe ui refresh-project --project <dir> --dry-run --format json
-    autoshop-agent.exe ui refresh-project --project <dir> --format json
-    autoshop-agent.exe ui close --program MAIN
-    autoshop-agent.exe ui open --program MAIN
-    autoshop-agent.exe ui open-path --path "系统变量表/_SYS_COM" --title _SYS_COM
-    autoshop-agent.exe ui focus --program MAIN
-    autoshop-agent.exe ui tree --format json
-    autoshop-agent.exe ui screenshot --out autoshop.png
-    autoshop-agent.exe ui screenshot --title 变量表 --out var-table.png --format json
-    autoshop-agent.exe ui screenshot --program MAIN --out main-editor.png --client
-    autoshop-agent.exe ui screenshot --title 变量表 --restore-offscreen --out var-table.png --format json
-    autoshop-agent.exe ui screenshot --title 变量表 --out diagnostic.png --allow-minimized
+| 字段 | 说明 |
+| --- | --- |
+| `slot` | 机槽号。 |
+| `model` | 模块型号，例如 `GL10(AM600)-4DA`。已知 GL10 样本可只填型号生成默认参数。 |
+| `identity` / `moduleTypeCode` / `instance` | AutoShop 私有模块标识。 |
+| `ioSignals` | 已有 X/Y 地址映射；可改地址，数量必须与该模块参数中地址字段一致。 |
+| `moduleParameters` | 模块内部页面参数。4DA/4AD 是 4 个通道页；8TC/4TC/4PT 是通道组页数组。 |
+| `parametersHex` | 未完全拆解时的保真兜底字节。 |
 
-### doc
+已按样本映射的模块包括 `GL10(AM600)-1600END`、`GL10(AM600)-3200END`、`GL10(AM600)-0032ETN`、`GL10(AM600)-4DA`、`GL10(AM600)-4AD`、`GL10(AM600)-8TC`、`GL10(AM600)-4TC`、`GL10(AM600)-4PT`。已确认字段可以语义编辑；未知私有位域保留 `rawCode` 或 `parametersHex`。
 
-    autoshop-agent.exe doc sources
-    autoshop-agent.exe doc outline --manual programming|instruction|user|autoshop
-    autoshop-agent.exe doc search <keyword> [--manual programming|instruction|all]
-    autoshop-agent.exe doc command-set --out AutoShopCliCommands.md
+### 4.6 EtherCAT
 
-## 兼容别名
+`ethercat.parameters` 当前只承诺写回常规设置：
 
-    autoshop-agent.exe list --project <dir>
-    autoshop-agent.exe export --project <dir> --program MAIN --out MAIN.st.txt
-    autoshop-agent.exe import --project <dir> --program MAIN --in MAIN.st.txt [--allow-open-project] [--refresh]
-    autoshop-agent.exe windows
-    autoshop-agent.exe refresh --program MAIN
+| 字段 | AutoShop 页面含义 |
+| --- | --- |
+| `cycleTimeUs` | 分布式时钟循环时间，单位 `us`。 |
+| `syncOffsetPercent` | 同步偏移，单位 `%`。 |
+| `autoRestartSlave` | 自动重启从站。 |
+| `aliasEnabled` | 别名模式使能。 |
+
+`ethercat.records` 里的 `parameter_0x...` 私有记录只读，`editable=false`。状态页里的循环时间、执行时间、丢帧次数等是在线任务监控值，不作为离线工程配置写回。
+
+### 4.7 运动控制轴
+
+运动轴位于 `motionAxis.axes`。当前支持修改既有轴参数，并同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；新增/删除轴暂不承诺。优先编辑每个轴的 `parameters`，`uiRecords` / `compilerRecords` 只用于底层诊断或未命名字段回写。
+
+常用字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `virtualAxisMode` | 基本设置“虚轴模式”。 |
+| `autoMappingEnabled` | 基本设置“自动映射”。 |
+| `encoderMode` | `增量模式|绝对模式`。写回时同步可见 UI 记录、`encoderModeEffective` 和 `encoderModeLinkedFlag`。 |
+| `axisMotionMode` | `线性模式|旋转模式`。 |
+| `softwareLimitEnabled` | 软件限位使能。 |
+| `ignoreLimitAfterErrorStop` | 由 `encoderMode` / `axisMotionMode` 改动时按 AutoShop 样本联动归一化：增量或旋转为 `true`，绝对+线性为 `false`。 |
+| `reverseDirection` | 单位换算页“反向”；同步可见复选框位和联动标志。 |
+| `gearDeviceEnabled` | 单位换算页“使用变速装置”。 |
+| `pulsesPerRevolution` | 十进制数；AutoShop 里的 `16#1000000` 对应 JSON `16777216`。 |
+| `homeOriginSignal` / `homeZSignal` / `homePositiveLimit` / `homeNegativeLimit` | `未分配|使用|不使用`。正负限位不能同时为 `使用`。 |
+| `homeReturnDirection` / `homeInputDetectionDirection` | `未分配|正向|负向`。 |
+| `homeMethodNumber` | 对已由样本确认的下拉项组合自动同步；未知组合不猜测。 |
+
+AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语义 `apply` 不强行改这个旧编译记录，除非用户明确编辑底层 `compilerRecords`。
+
+### 4.8 EtherNet/IP
+
+`ethernetIP` 当前映射：
+
+| 字段 | AutoShop 页面含义 |
+| --- | --- |
+| `producerTags` | 生产者标签。 |
+| `serverMessageTags` | 服务消息标签。 |
+| `adapter.connections` | EtherNet/IP Adapter 连接，包含 O->T/T->O 实例 ID 和大小。 |
+| `adapter.connections[].outputDatasets` | 输出数据集。 |
+| `adapter.connections[].inputDatasets` | 输入数据集。 |
+
+`workspace apply` 会重建 `EIP.dat` 并在原文件带有效尾部 CRC32 时重算校验；`EIP.data`、`EIP.datBAK`、`SYS_EIP.eIPgvt` 仍作为真实成员文件保留在 `files` 中。
+
+## 5. 完整指令索引
+
+### 5.1 config
+
+```powershell
+autoshop-agent.exe config init [--config path] [--project dir] [--autoshop-exe path] [--force]
+autoshop-agent.exe config show [--config path] [--format json]
+autoshop-agent.exe config validate [--config path]
+autoshop-agent.exe config get <key> [--config path]
+autoshop-agent.exe config set <key> <value> [--config path]
+autoshop-agent.exe config profile add <name> --transport ethernet --ip <ip> [--port <port>]
+autoshop-agent.exe config profile add <name> --transport usb
+autoshop-agent.exe config profile list
+autoshop-agent.exe config profile remove <name>
+```
+
+### 5.2 workspace
+
+```powershell
+autoshop-agent.exe workspace export --project <dir> --out <workspace-dir> [--force] [--format json]
+autoshop-agent.exe workspace apply --project <dir> --in <workspace-dir> [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh] [--format json]
+```
+
+### 5.3 project 和 project node
+
+```powershell
+autoshop-agent.exe project info --project <dir|hcp|hcpp|updown> [--format json]
+autoshop-agent.exe project tree --project <dir> [--format json]
+autoshop-agent.exe project check --project <dir> [--strict] [--format json]
+autoshop-agent.exe project backup --project <dir> --out <zip|dir> [--format json]
+autoshop-agent.exe project archive pack --project <dir> --out <zip> [--format json]
+autoshop-agent.exe project archive unpack --in <zip> --out <dir> [--format json]
+autoshop-agent.exe project compare --left <project> --right <project|target> [--detail] [--format json]
+autoshop-agent.exe project node list --project <dir> [--category program|config|monitor|report|trace|variable|all] [--format json]
+autoshop-agent.exe project node info --project <dir> --name <node> [--format json]
+autoshop-agent.exe project node export --project <dir> --name <node> --out <path> [--as auto|binary|json|zip] [--format json]
+autoshop-agent.exe project node import --project <dir> --name <node> --in <path> [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh] [--format json]
+autoshop-agent.exe project node refresh --project <dir> --name <node> [--format json]
+```
+
+`project node` 是节点级诊断/兼容入口。能用 workspace JSON 表达的内容，优先走 `workspace export/apply`。
+
+### 5.4 pou
+
+```powershell
+autoshop-agent.exe pou list --project <dir> [--format json]
+autoshop-agent.exe pou show --project <dir> --name MAIN [--format json]
+autoshop-agent.exe pou export --project <dir> --name MAIN --out MAIN.st.txt [--format json]
+autoshop-agent.exe pou export-all --project <dir> --out <dir> [--format json]
+autoshop-agent.exe pou import --project <dir> --name MAIN --in MAIN.st.txt [--dry-run] [--allow-open-project] [--refresh] [--format json]
+autoshop-agent.exe pou add --project <dir> --name SBR_002 --type program|subprogram|interrupt|fb|fc [--language litest] [--text <litest>] [--dry-run] [--allow-open-project] [--no-backup] [--format json]
+autoshop-agent.exe pou rename --project <dir> --from OLD --to NEW [--format json]
+autoshop-agent.exe pou remove --project <dir> --name SBR_002 [--format json]
+```
+
+`pou rename` 和 `pou remove` 当前只返回安全计划，不实际改工程。新增 POU 的推荐方式仍是在 workspace 中新增 `*.pou.json` 后 `workspace apply`。
+
+### 5.5 st
+
+```powershell
+autoshop-agent.exe st format --in source.st --out source.formatted.st
+autoshop-agent.exe st lint --in source.st [--target h5u|easy] [--firmware <version>] [--format json]
+autoshop-agent.exe st parse --in source.st [--format json]
+autoshop-agent.exe st symbols --in source.st [--format json]
+autoshop-agent.exe st refs --in source.st --symbol <name> [--format json]
+autoshop-agent.exe st scaffold mb-master --out example.st
+autoshop-agent.exe st scaffold fb-call --name <FB> --out call.st
+autoshop-agent.exe st instruction search <keyword> [--format json]
+autoshop-agent.exe st instruction show <name> [--format json]
+```
+
+### 5.6 var 和 var table
+
+```powershell
+autoshop-agent.exe var list --project <dir> [--scope global|local|system] [--format json]
+autoshop-agent.exe var export --project <dir> --out vars.csv|vars.json [--format json]
+autoshop-agent.exe var import --project <dir> --in vars.csv|vars.json [--merge|--replace] [--format json]
+autoshop-agent.exe var bind --project <dir> --name <var> --device D100 [--format json]
+autoshop-agent.exe var validate --project <dir> [--format json]
+autoshop-agent.exe var system list --project <dir> [--group ethernet|com|can|ecat|motion|info] [--format json]
+autoshop-agent.exe var system show --project <dir> --name _SYS_COM [--format json]
+autoshop-agent.exe var system export --project <dir> --name _SYS_COM --out _SYS_COM.svt [--format json]
+autoshop-agent.exe var system import --project <dir> --name _SYS_COM --in _SYS_COM.svt [--dry-run] [--allow-open-project] [--refresh] [--format json]
+autoshop-agent.exe var system refresh --project <dir> --name _SYS_COM [--format json]
+autoshop-agent.exe var table list --project <dir> [--category system|global|internal|all] [--all] [--format json]
+autoshop-agent.exe var table info --project <dir> --name variable|device|struct|fb-instance|_SYS_COM [--format json]
+autoshop-agent.exe var table export --project <dir> --name variable --out 变量表.gvt [--as binary|json|hex|base64] [--format json]
+autoshop-agent.exe var table import --project <dir> --name variable --in 变量表.gvt [--dry-run] [--allow-open-project] [--no-backup] [--force] [--refresh] [--format json]
+autoshop-agent.exe var table refresh --project <dir> --name variable [--format json]
+```
+
+变量内容编辑不要用 `var table import` 直接替换私有二进制；优先改 workspace 中的 `variables`、`definition.members`、`instances`。
+
+### 5.7 build
+
+```powershell
+autoshop-agent.exe build check --project <dir> [--format json]
+autoshop-agent.exe build diagnostics --project <dir> [--format json]
+autoshop-agent.exe build compile --project <dir> [--clean] [--backend simulator] [--format json]
+autoshop-agent.exe build down --project <dir> --out <file.down> [--include-source] [--retain keep|init] [--backend simulator] [--format json]
+autoshop-agent.exe build updown --project <dir> --out <file.updown> [--include-source] [--retain keep|init] [--backend simulator] [--format json]
+```
+
+当前 `compile/down/updown` 是 simulator 后端产物，不等同于 AutoShop 官方私有编译器生成的可下载文件。
+
+### 5.8 target / online / monitor
+
+```powershell
+autoshop-agent.exe target scan [--transport ethernet|usb] [--backend simulator] [--format json]
+autoshop-agent.exe target connect --profile <name> [--backend simulator] [--format json]
+autoshop-agent.exe target info --profile <name> [--format json]
+autoshop-agent.exe target login --profile <name> [--password <value>] [--format json]
+autoshop-agent.exe target logout --profile <name> [--format json]
+autoshop-agent.exe target run --profile <name> [--yes] [--format json]
+autoshop-agent.exe target stop --profile <name> [--yes] [--format json]
+autoshop-agent.exe target mode --profile <name> [--format json]
+autoshop-agent.exe target download --profile <name> --project <dir> [--yes] [--format json]
+autoshop-agent.exe target upload --profile <name> --out <dir|updown> [--format json]
+autoshop-agent.exe target download-file --profile <name> --in <down|updown> [--yes] [--format json]
+autoshop-agent.exe target upload-updown --profile <name> --out <file.updown> [--format json]
+autoshop-agent.exe online enter --profile <name> --project <dir> [--format json]
+autoshop-agent.exe online status --profile <name> [--format json]
+autoshop-agent.exe online patch --profile <name> --project <dir> --in <patch-file> [--yes] [--format json]
+autoshop-agent.exe online commit --profile <name> [--yes] [--format json]
+autoshop-agent.exe online exit --profile <name> [--format json]
+autoshop-agent.exe online compare --profile <name> --project <dir> [--format json]
+autoshop-agent.exe monitor read --profile <name> --device D100 [--format json]
+autoshop-agent.exe monitor write --profile <name> --device D100 --value 123 [--yes] [--format json]
+autoshop-agent.exe monitor watch --profile <name> --items D100,M0,TEST --interval 100ms --out samples.ndjson
+autoshop-agent.exe monitor memory save --profile <name> --project <dir> --out snapshot.json [--format json]
+autoshop-agent.exe monitor memory load --profile <name> --project <dir> --in snapshot.json [--yes] [--format json]
+autoshop-agent.exe monitor recipe save --profile <name> --project <dir> --out recipe.json [--format json]
+autoshop-agent.exe monitor recipe apply --profile <name> --project <dir> --in recipe.json [--yes] [--format json]
+```
+
+这些命令当前只操作本地模拟状态，不连接、不扫描、不运行、不停止、不下载、不上传真实 PLC。显式传 `--backend hardware` 会失败并提示硬件后端尚未实现。
+
+### 5.9 trace / diagnose
+
+```powershell
+autoshop-agent.exe trace list --project <dir> [--format json]
+autoshop-agent.exe trace add --project <dir> --name <trace> --items D100,D200,TEST [--format json]
+autoshop-agent.exe trace start --profile <name> --name <trace> [--format json]
+autoshop-agent.exe trace stop --profile <name> --name <trace> [--format json]
+autoshop-agent.exe trace export --project <dir> --name <trace> --out trace.csv [--format json]
+autoshop-agent.exe trace remove --project <dir> --name <trace> [--format json]
+autoshop-agent.exe diagnose target --profile <name> [--format json]
+autoshop-agent.exe diagnose logs --profile <name> --out logs.json [--format json]
+autoshop-agent.exe diagnose error-code <code> [--domain program|modbus|ethercat|motion|system] [--format json]
+autoshop-agent.exe diagnose project --project <dir> [--format json]
+autoshop-agent.exe diagnose bundle --project <dir> [--profile <name>] --out support.zip [--format json]
+```
+
+`trace` 当前是本地侧车定义和导出，不启动真实 PLC 采样。
+
+### 5.10 comm / motion
+
+```powershell
+autoshop-agent.exe comm serial show --project <dir> [--format json]
+autoshop-agent.exe comm serial set --project <dir> --port COM1 --baud 9600 --data-bits 8 --parity none --stop-bits 1 [--format json]
+autoshop-agent.exe comm modbus-rtu master add --project <dir> --name <name> --port COM1 --addr <id> [--format json]
+autoshop-agent.exe comm modbus-tcp master add --project <dir> --name <name> --ip <ip> --port 502 [--format json]
+autoshop-agent.exe comm ethernet show --project <dir> [--format json]
+autoshop-agent.exe comm ethernet set-ip --profile <name> --ip <ip> --mask <mask> --gateway <gateway> [--yes] [--format json]
+autoshop-agent.exe comm can show --project <dir> [--format json]
+autoshop-agent.exe comm canopen import-eds --project <dir> --in <file.eds> [--format json]
+autoshop-agent.exe comm ethercat import-xml --project <dir> --in <file.xml> [--format json]
+autoshop-agent.exe comm ethercat scan --profile <name> [--format json]
+autoshop-agent.exe comm ethercat status --profile <name> [--format json]
+autoshop-agent.exe motion axis list --project <dir> [--format json]
+autoshop-agent.exe motion axis add --project <dir> --name Axis1 --type ethercat|pulse [--format json]
+autoshop-agent.exe motion axis set --project <dir> --name Axis1 --param <key=value> [--format json]
+autoshop-agent.exe motion axis status --profile <name> --name Axis1 [--format json]
+autoshop-agent.exe motion group list --project <dir> [--format json]
+autoshop-agent.exe motion group add --project <dir> --name Group1 --axes Axis1,Axis2 [--format json]
+autoshop-agent.exe motion cam import --project <dir> --name Cam1 --in cam.csv [--format json]
+autoshop-agent.exe motion cam export --project <dir> --name Cam1 --out cam.csv [--format json]
+autoshop-agent.exe motion hsc list --project <dir> [--format json]
+autoshop-agent.exe motion hsc add --project <dir> --name Counter1 --mode linear|rotary [--format json]
+```
+
+这些组当前是 simulator / 本地侧车能力。真实工程配置优先通过 workspace 中的配置 JSON 修改。
+
+### 5.11 ui
+
+```powershell
+autoshop-agent.exe ui windows [--format json]
+autoshop-agent.exe ui tree [--format json]
+autoshop-agent.exe ui refresh --program MAIN [--format json]
+autoshop-agent.exe ui refresh-path --path "全局变量/变量表" [--title 变量表] [--format json]
+autoshop-agent.exe ui close-project --project <dir> [--project-file <hcp|hcpp>] [--autoshop-exe <path>] [--state project-state.json] [--timeout-ms 20000] [--dry-run] [--format json]
+autoshop-agent.exe ui restore-project [--project <dir>] [--state project-state.json] [--project-file <hcp|hcpp>] [--autoshop-exe <path>] [--timeout-ms 20000] [--dry-run] [--format json]
+autoshop-agent.exe ui refresh-project --project <dir> [--dry-run] [--format json]
+autoshop-agent.exe ui close --program MAIN [--format json]
+autoshop-agent.exe ui open --program MAIN [--format json]
+autoshop-agent.exe ui open-path --path "系统变量表/_SYS_COM" [--title _SYS_COM] [--format json]
+autoshop-agent.exe ui focus --program MAIN [--format json]
+autoshop-agent.exe ui screenshot --out autoshop.png [--format json]
+autoshop-agent.exe ui screenshot --title 变量表 --out var-table.png [--format json]
+autoshop-agent.exe ui screenshot --program MAIN --out main-editor.png [--client] [--format json]
+autoshop-agent.exe ui screenshot --title 变量表 --restore-offscreen --out var-table.png [--offscreen-visible 4] [--format json]
+autoshop-agent.exe ui screenshot --hwnd 0x1234 --out window.png [--allow-minimized] [--format json]
+```
+
+`ui focus` 会切前台；`ui open` / `ui refresh` / `ui close-project` / `ui restore-project` 可能操作 AutoShop 界面。用户正在使用电脑时不要执行这些命令，除非用户明确同意。
+
+### 5.12 doc
+
+```powershell
+autoshop-agent.exe doc sources [--format json]
+autoshop-agent.exe doc outline [--manual programming|instruction|user|autoshop|all] [--format json]
+autoshop-agent.exe doc search <keyword> [--manual programming|instruction|user|autoshop|all] [--format json]
+autoshop-agent.exe doc command-set [--out AutoShopCliCommands.md] [--format json]
+```
+
+`doc command-set` 输出的内容与本文件同源，用于重新生成指令文档。
+
+## 6. 兼容别名
+
+旧入口仍可用，但新流程应优先使用完整命令：
+
+```powershell
+autoshop-agent.exe list --project <dir> [--json]
+autoshop-agent.exe export --project <dir> --program MAIN --out MAIN.st.txt
+autoshop-agent.exe import --project <dir> --program MAIN --in MAIN.st.txt [--allow-open-project] [--refresh]
+autoshop-agent.exe refresh --program MAIN
+autoshop-agent.exe windows [--json]
+```
+
+## 7. 验收建议
+
+文件层编辑的最小验收顺序：
+
+1. `workspace apply --dry-run --format json`，确认没有格式错误、冲突或只读字段修改。
+2. 正式 `workspace apply --format json`，检查每个变更项的 `verified=true`。
+3. 重新 `workspace export --force` 到固定目录，读取 JSON 确认语义字段已回读为预期值。
+4. 如需 AutoShop 画面同步，由用户手动关闭/打开工程，或在用户同意时执行 `ui close-project` / `ui restore-project`。
+
+当前没有 PLC 真机后端。所有真机相关指令只能作为接口占位和离线测试入口使用。
