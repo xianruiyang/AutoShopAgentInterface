@@ -94,8 +94,8 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | 配置/模块配置 | `配置/模块配置/_node.config.json` | 优先改 `moduleConfig.modules` 和每槽位 `moduleParameters`。 |
 | 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
 | 配置/轴组设置 | `配置/轴组设置/_node.config.json` | 优先改 `axisGroup.groups[].parameters`。 |
-| 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`。 |
-| 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP.devices`、标签、连接和 I/O 数据集。 |
+| 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`；`ethercat.catalog` 提供 ESI 设备库 `catalogKey`。 |
+| 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP.devices`、标签、连接和 I/O 数据集；`ethernetIP.catalog` 提供 EDS 设备库 `catalogKey`。 |
 | 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
 
 Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配置/COM0` 在 workspace 中是 `配置/COM0_/_node.config.json`，JSON 内 `treePath` 仍保留原始树路径。
@@ -194,7 +194,8 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 | --- | --- |
 | `key` | 本次导出的稳定键；删除从站时从数组移除对应对象。 |
 | `templateKey` | 新增从站时使用的模板键，指向当前工程中已有从站的 `key`。 |
-| `name` / `deviceVersion` / `productCode` / `protocol` | 从 `0x20000121` 等通用记录解析出的设备身份信息。 |
+| `catalogKey` | 新增从站时使用的设备库键，来自 `ethercat.catalog.devices[].key`。有同型号模板时自动克隆模板；没有模板时按 ESI 生成基础从站段。 |
+| `name` / `deviceVersion` / `productCode` / `protocol` | 从 `0x20000121` 等通用记录解析出的设备身份信息；`name` 写回时会同步到从站设备名，若同时设置 `parameters.deviceName` 则以后者为准。 |
 | `parameters` | 已确认的通用从站字段，优先编辑这里。 |
 | `records` | 从站段内完整私有记录，包含 PDO、对象字典、设备参数等型号专属内容；未命名字段可在这里按 `value` 修改。 |
 | `segmentBase64` | 完整从站段原始模板；用于精确克隆和保真回写。 |
@@ -211,19 +212,32 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 | `cycleTimeAUs` / `cycleTimeBUs` / `cycleTimeCUs` | 从站通用周期字段。 |
 | `deviceName` / `deviceVersion` / `productCode` / `protocol` / `internalPort` | 设备身份和内部端口字段。 |
 
+`ethercat.catalog` 从 AutoShop 安装目录的 `xml/*.xml` 解析 ESI 设备库。每个设备会列出 `key`、型号、ProductCode、Revision、同步管理器、Rx/Tx PDO、DC 模式和 `templateAvailable`。如果 `templateAvailable=true`，说明当前工程已有同型号从站，新增时会优先克隆完整私有 `segmentBase64` 模板；如果为 `false`，CLI 会用 ESI 生成基础从站段，能写入身份、同步、PDO 元数据和通用参数，但不能承诺覆盖 AutoShop 厂商私有配置页里的每个隐藏字段。
+
 修改既有从站时，保留数组顺序并改对应对象的 `parameters` 或 `records[].value`。删除从站时，直接删除对应 `slaves[]` 对象。新增同型号从站时，在数组末尾追加最小对象：
 
 ```json
 {
   "key": "slave_010_GR10_4ADE_CLONE",
   "templateKey": "slave_004_GR10-4ADE",
+  "name": "GR10-4ADE-CLONE"
+}
+```
+
+新增设备库型号时可以直接使用 `catalogKey`：
+
+```json
+{
+  "key": "slave_011_SV520N",
+  "name": "SV520N_JSON",
+  "catalogKey": "ecat:SV520N-Ecat_v012:SV520N:c030a:10001",
   "parameters": {
-    "deviceName": "GR10-4ADE-CLONE"
+    "expertSettingsEnabled": true
   }
 }
 ```
 
-新增完全陌生型号时，CLI 不能凭型号名离线生成 ESI/PDO/对象字典；需要先在 AutoShop 中添加一次该型号作为模板，或从另一个导出映射复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`，并保留运动轴、轴组尾部记录不被从站增删改覆盖。
+如果需要 100% 保留某型号厂商私有页面的全部底层字段，仍应优先让 `catalogKey` 命中 `templateAvailable=true` 的同型号模板，或显式复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`，并保留运动轴、轴组尾部记录不被从站增删改覆盖。
 
 注意：SV510 页面里的“同步单元周期 x1/x2”与当前已命名的 `cycleTimeAUs/BUs/CUs` 不是同一个可见联动字段；目前只能可靠导出/应用专家模式、同步模式、周期记录和完整私有 records，不能承诺用 JSON 直接把该下拉从 `x1` 切到 `x2`。
 
@@ -311,17 +325,18 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `adapter.connections[].inputDatasets` | 输入数据集。 |
 | `availableDataTypes` | 服务消息标签等通用 EtherNet/IP 标签类型参考。 |
 | `availableAdapterDataTypes` | Adapter I/O 数据集的 AutoShop UI 实际可选类型。 |
+| `catalog` | 从 AutoShop `sys/EipEds/*.eds` 解析出的 EtherNet/IP 设备库。 |
 
 Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使用 `INT`、`DINT`、`REAL`。这是 AutoShop 当前 Adapter I/O 数据集下拉的实际限制；虽然 EtherNet/IP 标签层还存在 `BOOL`、`BYTE`、`STRING` 等通用类型，但这些不能作为 Adapter I/O 数据集类型写入。`workspace apply` 会拒绝不在 `availableAdapterDataTypes` 中的类型。
 
-`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除；新增同型号/同结构设备时追加带 `templateKey` 的对象。新增完全陌生 EDS 设备时，先在 AutoShop 中添加一次作为模板，或从其他导出映射复制完整 `records`。
+`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除；新增同型号/同结构设备时追加带 `templateKey` 的对象；新增 EDS 设备时可追加带 `catalogKey` 的对象。`catalogKey` 来自 `ethernetIP.catalog.devices[].key`。如果同型号 `templateAvailable=true`，apply 会优先克隆完整工程模板；否则会按 EDS identity 生成基础设备记录。
 
 常用 `devices[]` 字段：
 
 | 字段 | 含义 |
 | --- | --- |
 | `key` | 本次导出的稳定键；`templateKey` 引用它。 |
-| `name` / `catalogKey` | 根据 Vendor/Product/Revision 推断的设备名和身份键。 |
+| `name` / `catalogKey` | 根据 Vendor/Product/Revision 推断的设备名和身份键；新增设备时可只填 `catalogKey`、`key` 和必要的 `ipAddress`。 |
 | `ipAddress` | 设备 IP。 |
 | `vendorId` / `productType` / `productCode` / `majorRevision` / `minorRevision` | EDS/CIP 身份字段。 |
 | `parameters` | 已确认设备字段，优先编辑这里。 |
@@ -339,6 +354,21 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
   "parameters": {
     "ipAddress": "192.168.1.4",
     "productCode": 269
+  }
+}
+```
+
+示例：直接用 EDS 设备库新增 Easy：
+
+```json
+{
+  "key": "device_002_Easy",
+  "catalogKey": "vendor:1660/productType:14/productCode:269/revision:1.1",
+  "ipAddress": "192.168.1.77",
+  "parameters": {
+    "outputSizeBytes": 120,
+    "inputSizeBytes": 124,
+    "rpiMs": 50
   }
 }
 ```
