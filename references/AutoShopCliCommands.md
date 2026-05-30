@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.49`。
+适用版本：`autoshop-agent.exe v0.8.50`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -267,6 +267,10 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `adapter.connections` | EtherNet/IP Adapter 连接，包含 O->T/T->O 实例 ID 和大小。 |
 | `adapter.connections[].outputDatasets` | 输出数据集。 |
 | `adapter.connections[].inputDatasets` | 输入数据集。 |
+| `availableDataTypes` | 服务消息标签等通用 EtherNet/IP 标签类型参考。 |
+| `availableAdapterDataTypes` | Adapter I/O 数据集的 AutoShop UI 实际可选类型。 |
+
+Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使用 `INT`、`DINT`、`REAL`。这是 AutoShop 当前 Adapter I/O 数据集下拉的实际限制；虽然 EtherNet/IP 标签层还存在 `BOOL`、`BYTE`、`STRING` 等通用类型，但这些不能作为 Adapter I/O 数据集类型写入。`workspace apply` 会拒绝不在 `availableAdapterDataTypes` 中的类型。
 
 `workspace apply` 会重建 `EIP.dat` 并在原文件带有效尾部 CRC32 时重算校验；`EIP.data`、`EIP.datBAK`、`SYS_EIP.eIPgvt` 仍作为真实成员文件保留在 `files` 中。
 
