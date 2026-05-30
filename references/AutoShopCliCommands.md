@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.43`。
+适用版本：`autoshop-agent.exe v0.8.44`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -193,7 +193,7 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 
 | 字段 | 含义 |
 | --- | --- |
-| `virtualAxisMode` | 基本设置“虚轴模式”。 |
+| `virtualAxisMode` | 基本设置“虚轴模式”；按手动保存样本同步可见 UI 记录 `0x80000111` 和编译记录 `0x1900xx06`。 |
 | `autoMappingEnabled` | 基本设置“自动映射”。 |
 | `encoderMode` | `增量模式|绝对模式`。写回时同步可见 UI 记录、`encoderModeEffective` 和 `encoderModeLinkedFlag`。 |
 | `axisMotionMode` | `线性模式|旋转模式`。 |
