@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.46`。
+适用版本：`autoshop-agent.exe v0.8.45`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -188,7 +188,7 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 
 ### 4.7 运动控制轴
 
-运动轴位于 `motionAxis.axes`。当前支持修改既有轴参数，并支持在数组末尾追加新轴，同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；删除或中间插入轴暂不承诺。优先编辑每个轴的 `parameters`，`uiRecords` / `compilerRecords` 只用于底层诊断或未命名字段回写。新增轴时可只追加带 `name`/`axisName` 的对象，CLI 会从最后一个现有轴复制 AutoShop 私有记录模板，并自动重写 `axisNumber`、`axisNumberMirror`、轴名和 `0x1900....` 编译记录组号。
+运动轴位于 `motionAxis.axes`。当前支持修改既有轴参数，并同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；新增/删除轴暂不承诺。优先编辑每个轴的 `parameters`，`uiRecords` / `compilerRecords` 只用于底层诊断或未命名字段回写。
 
 常用字段：
 
@@ -211,7 +211,7 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 ### 4.8 轴组设置
 
-轴组设置位于 `axisGroup.groups`。当前支持修改既有轴组，并支持在数组末尾追加新轴组，同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；删除或中间插入轴组暂不承诺。优先编辑每个轴组的 `parameters`，`records` 只作为底层诊断视图。新增轴组时可只追加带 `groupName`、轴选择和速度/加速度参数的对象，CLI 会从最后一个现有轴组复制 AutoShop 私有记录模板，并自动重写 `groupNumber`、`groupNumberMirror` 和轴组名。
+轴组设置位于 `axisGroup.groups`。当前支持修改既有轴组，并同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；新增/删除轴组暂不承诺。优先编辑每个轴组的 `parameters`，`records` 只作为底层诊断视图。
 
 常用字段：
 
