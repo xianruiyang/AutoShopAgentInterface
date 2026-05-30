@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.52`。
+适用版本：`autoshop-agent.exe v0.8.55`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -243,6 +243,8 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 确实只需要基础 ESI 实例时，可以额外设置 `"allowGeneratedFromCatalog": true`；该模式只承诺写入身份、同步、PDO 元数据和通用参数，不承诺覆盖厂家私有配置页隐藏字段。
 
 注意：SV510 页面里的“同步单元周期 x1/x2”与当前已命名的 `cycleTimeAUs/BUs/CUs` 不是同一个可见联动字段；目前只能可靠导出/应用专家模式、同步模式、周期记录和完整私有 records，不能承诺用 JSON 直接把该下拉从 `x1` 切到 `x2`。
+
+导出 `配置/EtherCAT`、`配置/运动控制轴`、`配置/轴组设置` 时，CLI 会在 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK` 三个镜像里选择内容最完整的源文件作为语义 JSON 的 `sourceRelative`。这用于处理 AutoShop 偶尔把完整 EtherCAT 状态保留在 BAK，而主 dat/tmp 只剩主站记录的情况；应用时仍会同步写回三个镜像文件。
 
 ### 4.7 运动控制轴
 
