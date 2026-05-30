@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.51`。
+适用版本：`autoshop-agent.exe v0.8.52`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -42,6 +42,8 @@ D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe workspace apply
 D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui close-project --project D:\program\PLC\project001 --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
 D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui restore-project --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
 ```
+
+`ui restore-project` 会优先在记录的同一个 AutoShop 进程中通过“打开工程”对话框恢复工程；只有原进程不存在时才退回到按工程文件启动 AutoShop。该流程会短暂切前台并使用剪贴板粘贴工程路径。
 
 当前用户使用电脑时不要执行会弹窗、切前台或输入键鼠的 UI 命令。`ui screenshot` 使用 Win32 `PrintWindow`，通常不会切到前台；目标最小化时可用 `--restore-offscreen` 临时移到屏幕边缘截图再最小化回去。
 
@@ -93,7 +95,7 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
 | 配置/轴组设置 | `配置/轴组设置/_node.config.json` | 优先改 `axisGroup.groups[].parameters`。 |
 | 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`。 |
-| 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP` 下的标签、连接和 I/O 数据集。 |
+| 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP.devices`、标签、连接和 I/O 数据集。 |
 | 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
 
 Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配置/COM0` 在 workspace 中是 `配置/COM0_/_node.config.json`，JSON 内 `treePath` 仍保留原始树路径。
@@ -205,6 +207,7 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 | `physicalAddress` / `positionIndex` | 从站物理序号。 |
 | `stationIndex` | AutoShop 从站树/站号索引；新增克隆从站未显式填写时会按当前最大值加 1。 |
 | `syncMode` | 同步模式字符串，例如 `DC-Synchron`、`SM-Synchron`。 |
+| `expertSettingsEnabled` | 从站页面“使能专家设置”。 |
 | `cycleTimeAUs` / `cycleTimeBUs` / `cycleTimeCUs` | 从站通用周期字段。 |
 | `deviceName` / `deviceVersion` / `productCode` / `protocol` / `internalPort` | 设备身份和内部端口字段。 |
 
@@ -221,6 +224,8 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 ```
 
 新增完全陌生型号时，CLI 不能凭型号名离线生成 ESI/PDO/对象字典；需要先在 AutoShop 中添加一次该型号作为模板，或从另一个导出映射复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`，并保留运动轴、轴组尾部记录不被从站增删改覆盖。
+
+注意：SV510 页面里的“同步单元周期 x1/x2”与当前已命名的 `cycleTimeAUs/BUs/CUs` 不是同一个可见联动字段；目前只能可靠导出/应用专家模式、同步模式、周期记录和完整私有 records，不能承诺用 JSON 直接把该下拉从 `x1` 切到 `x2`。
 
 ### 4.7 运动控制轴
 
@@ -298,6 +303,7 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 | 字段 | AutoShop 页面含义 |
 | --- | --- |
+| `devices` | 工程树 `配置/EtherNet/IP` 下的设备/从站，例如 `EIP_Card`、`H5U`、`Easy`。 |
 | `producerTags` | 生产者标签。 |
 | `serverMessageTags` | 服务消息标签。 |
 | `adapter.connections` | EtherNet/IP Adapter 连接，包含 O->T/T->O 实例 ID 和大小。 |
@@ -308,7 +314,36 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使用 `INT`、`DINT`、`REAL`。这是 AutoShop 当前 Adapter I/O 数据集下拉的实际限制；虽然 EtherNet/IP 标签层还存在 `BOOL`、`BYTE`、`STRING` 等通用类型，但这些不能作为 Adapter I/O 数据集类型写入。`workspace apply` 会拒绝不在 `availableAdapterDataTypes` 中的类型。
 
-`workspace apply` 会重建 `EIP.dat` 并在原文件带有效尾部 CRC32 时重算校验；`EIP.data`、`EIP.datBAK`、`SYS_EIP.eIPgvt` 仍作为真实成员文件保留在 `files` 中。
+`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除；新增同型号/同结构设备时追加带 `templateKey` 的对象。新增完全陌生 EDS 设备时，先在 AutoShop 中添加一次作为模板，或从其他导出映射复制完整 `records`。
+
+常用 `devices[]` 字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `key` | 本次导出的稳定键；`templateKey` 引用它。 |
+| `name` / `catalogKey` | 根据 Vendor/Product/Revision 推断的设备名和身份键。 |
+| `ipAddress` | 设备 IP。 |
+| `vendorId` / `productType` / `productCode` / `majorRevision` / `minorRevision` | EDS/CIP 身份字段。 |
+| `parameters` | 已确认设备字段，优先编辑这里。 |
+| `records` | 设备完整 AutoShop 私有记录视图，用于型号专属字段保真和兜底编辑。 |
+
+示例：用当前工程的 H5U 模板克隆一个 Easy：
+
+```json
+{
+  "key": "device_002_Easy",
+  "templateKey": "device_001_H5U",
+  "name": "Easy",
+  "ipAddress": "192.168.1.4",
+  "productCode": 269,
+  "parameters": {
+    "ipAddress": "192.168.1.4",
+    "productCode": 269
+  }
+}
+```
+
+`workspace apply` 会重建 `EIP.dat`，并同步 `EIP.datBAK`；原文件带有效尾部 CRC32 时会重算校验。`EIP.data`、`SYS_EIP.eIPgvt` 仍作为真实成员文件保留在 `files` 中。
 
 ## 5. 完整指令索引
 
