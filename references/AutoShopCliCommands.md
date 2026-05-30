@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.50`。
+适用版本：`autoshop-agent.exe v0.8.51`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -92,7 +92,7 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | 配置/模块配置 | `配置/模块配置/_node.config.json` | 优先改 `moduleConfig.modules` 和每槽位 `moduleParameters`。 |
 | 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
 | 配置/轴组设置 | `配置/轴组设置/_node.config.json` | 优先改 `axisGroup.groups[].parameters`。 |
-| 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 只改已确认可写的 `ethercat.parameters`。 |
+| 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`。 |
 | 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP` 下的标签、连接和 I/O 数据集。 |
 | 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
 
@@ -184,7 +184,43 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 | `autoRestartSlave` | 自动重启从站。 |
 | `aliasEnabled` | 别名模式使能。 |
 
-`ethercat.records` 里的 `parameter_0x...` 私有记录只读，`editable=false`。状态页里的循环时间、执行时间、丢帧次数等是在线任务监控值，不作为离线工程配置写回。
+`ethercat.records` 里的 `parameter_0x...` 是主站私有记录视图；状态页里的循环时间、执行时间、丢帧次数等是在线任务监控值，不作为离线工程配置写回。
+
+`ethercat.slaves` 是顶层从站数组。每个从站对象包含：
+
+| 字段 | 含义 |
+| --- | --- |
+| `key` | 本次导出的稳定键；删除从站时从数组移除对应对象。 |
+| `templateKey` | 新增从站时使用的模板键，指向当前工程中已有从站的 `key`。 |
+| `name` / `deviceVersion` / `productCode` / `protocol` | 从 `0x20000121` 等通用记录解析出的设备身份信息。 |
+| `parameters` | 已确认的通用从站字段，优先编辑这里。 |
+| `records` | 从站段内完整私有记录，包含 PDO、对象字典、设备参数等型号专属内容；未命名字段可在这里按 `value` 修改。 |
+| `segmentBase64` | 完整从站段原始模板；用于精确克隆和保真回写。 |
+
+常用 `slaves[].parameters`：
+
+| 字段 | 含义 |
+| --- | --- |
+| `autoIncrementAddress` | 自动增量地址，常见为 `-物理序号`。 |
+| `physicalAddress` / `positionIndex` | 从站物理序号。 |
+| `stationIndex` | AutoShop 从站树/站号索引；新增克隆从站未显式填写时会按当前最大值加 1。 |
+| `syncMode` | 同步模式字符串，例如 `DC-Synchron`、`SM-Synchron`。 |
+| `cycleTimeAUs` / `cycleTimeBUs` / `cycleTimeCUs` | 从站通用周期字段。 |
+| `deviceName` / `deviceVersion` / `productCode` / `protocol` / `internalPort` | 设备身份和内部端口字段。 |
+
+修改既有从站时，保留数组顺序并改对应对象的 `parameters` 或 `records[].value`。删除从站时，直接删除对应 `slaves[]` 对象。新增同型号从站时，在数组末尾追加最小对象：
+
+```json
+{
+  "key": "slave_010_GR10_4ADE_CLONE",
+  "templateKey": "slave_004_GR10-4ADE",
+  "parameters": {
+    "deviceName": "GR10-4ADE-CLONE"
+  }
+}
+```
+
+新增完全陌生型号时，CLI 不能凭型号名离线生成 ESI/PDO/对象字典；需要先在 AutoShop 中添加一次该型号作为模板，或从另一个导出映射复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`，并保留运动轴、轴组尾部记录不被从站增删改覆盖。
 
 ### 4.7 运动控制轴
 
