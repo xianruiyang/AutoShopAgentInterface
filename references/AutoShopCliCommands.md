@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.47`。
+适用版本：`autoshop-agent.exe v0.8.48`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -188,7 +188,7 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 
 ### 4.7 运动控制轴
 
-运动轴位于 `motionAxis.axes`。当前支持修改既有轴参数，并同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；新增/删除轴会被 `workspace apply` 拒绝。优先编辑每个轴的 `parameters`，`uiRecords` / `compilerRecords` 只用于底层诊断或未命名字段回写。
+运动轴位于 `motionAxis.axes`。当前支持修改既有轴参数，也支持在数组末尾追加默认运动轴，并同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；删除或中间插入轴会被 `workspace apply` 拒绝。优先编辑每个轴的 `parameters`，`uiRecords` / `compilerRecords` 只用于底层诊断或未命名字段回写。
 
 常用字段：
 
@@ -209,9 +209,20 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 
 AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语义 `apply` 不强行改这个旧编译记录，除非用户明确编辑底层 `compilerRecords`。
 
+新增轴时，在 `motionAxis.axes` 末尾追加一个最小对象即可；轴号、记录组和底层默认记录按数组位置自动生成。示例：
+
+```json
+{
+  "name": "Axis_2",
+  "parameters": {
+    "axisName": "Axis_2"
+  }
+}
+```
+
 ### 4.8 轴组设置
 
-轴组设置位于 `axisGroup.groups`。当前支持修改既有轴组，并同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；新增/删除轴组会被 `workspace apply` 拒绝。优先编辑每个轴组的 `parameters`，`records` 只作为底层诊断视图。
+轴组设置位于 `axisGroup.groups`。当前支持修改既有轴组，也支持在数组末尾追加默认轴组，并同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；删除或中间插入轴组会被 `workspace apply` 拒绝。优先编辑每个轴组的 `parameters`，`records` 只作为底层诊断视图。
 
 常用字段：
 
@@ -225,6 +236,25 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `stopMode` | 插补参数“停止方式”；当前样本确认值为 `立即停止`。 |
 
 `axisGroup.availableAxes` 会列出当前工程可选运动轴名称。`未分配` 在底层可能保存为空字符串或 GB2312 的“未分配”，导出统一显示为 `未分配`，应用未变化时不会改动原始字节。
+
+新增轴组时，在 `axisGroup.groups` 末尾追加对象；`groupNumber` 和 `groupName` 会按数组位置和名称自动归一化。示例：
+
+```json
+{
+  "name": "GroupAxes_2",
+  "parameters": {
+    "groupName": "GroupAxes_2",
+    "xAxis": "Axis_0",
+    "yAxis": "Axis_1",
+    "zAxis": "Axis_2",
+    "auxiliaryAxis": "未分配",
+    "maxSpeed": 3000,
+    "maxAcceleration": 500
+  }
+}
+```
+
+如果一次同时修改 `配置/运动控制轴/_node.config.json` 和 `配置/轴组设置/_node.config.json`，`workspace apply` 会对同一个 `EtherCat.dat` 串行叠加语义改动，不需要分两次应用。
 
 ### 4.9 EtherNet/IP
 
