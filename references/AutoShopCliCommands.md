@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.44`。
+适用版本：`autoshop-agent.exe v0.8.45`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -91,6 +91,7 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | 配置/输入滤波 | `配置/输入滤波/_node.config.json` | 优先改 `inputFilter.parameters`。 |
 | 配置/模块配置 | `配置/模块配置/_node.config.json` | 优先改 `moduleConfig.modules` 和每槽位 `moduleParameters`。 |
 | 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
+| 配置/轴组设置 | `配置/轴组设置/_node.config.json` | 优先改 `axisGroup.groups[].parameters`。 |
 | 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 只改已确认可写的 `ethercat.parameters`。 |
 | 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP` 下的标签、连接和 I/O 数据集。 |
 | 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
@@ -208,7 +209,24 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 
 AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语义 `apply` 不强行改这个旧编译记录，除非用户明确编辑底层 `compilerRecords`。
 
-### 4.8 EtherNet/IP
+### 4.8 轴组设置
+
+轴组设置位于 `axisGroup.groups`。当前支持修改既有轴组，并同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`；新增/删除轴组暂不承诺。优先编辑每个轴组的 `parameters`，`records` 只作为底层诊断视图。
+
+常用字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `groupNumber` | 轴组号；AutoShop UI 中为只读，JSON 写回时会同步底层镜像记录。 |
+| `groupName` | 轴组名称，例如 `GroupAxes_0`。 |
+| `xAxis` / `yAxis` / `zAxis` / `auxiliaryAxis` | 基本设置中的 X/Y/Z/辅助轴，值可填 `availableAxes` 中的轴名或 `未分配`。 |
+| `maxSpeed` | 参数设置“最大速度”，单位 `Unit/s`。 |
+| `maxAcceleration` | 参数设置“最大加速度”，单位 `Unit/s^2`。 |
+| `stopMode` | 插补参数“停止方式”；当前样本确认值为 `立即停止`。 |
+
+`axisGroup.availableAxes` 会列出当前工程可选运动轴名称。`未分配` 在底层可能保存为空字符串或 GB2312 的“未分配”，导出统一显示为 `未分配`，应用未变化时不会改动原始字节。
+
+### 4.9 EtherNet/IP
 
 `ethernetIP` 当前映射：
 
