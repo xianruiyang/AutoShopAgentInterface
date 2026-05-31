@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.62`。
+适用版本：`autoshop-agent.exe v0.8.63`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -240,7 +240,7 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 }
 ```
 
-当 `catalogKey` 命中 `templateAvailable=true` 时，新增对象可以只填 `key`、`catalogKey` 和需要覆盖的 `parameters`；`deviceName` 未填写时会自动生成 AutoShop 可识别的数字副本名，例如已有 `SV820N` 和 `SV820N_1` 时新增为 `SV820N_2`。`deviceVersion`、`productCode`、`protocol`、`internalPort` 会从 catalog/模板默认补齐。如果需要 100% 保留某型号厂商私有页面的全部底层字段，仍应优先让 `catalogKey` 命中 `templateAvailable=true` 的同型号模板，或显式复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`、`SYS_ETHERCAT.ecgvt`、`.hcp` 和 `.hcpp`，并保留运动轴、轴组尾部记录不被从站增删改覆盖。
+当 `catalogKey` 命中 `templateAvailable=true` 时，新增对象可以只填 `key`、`catalogKey` 和需要覆盖的 `parameters`；`deviceName` 未填写时会自动生成 AutoShop 可识别的数字副本名，例如已有 `SV820N` 和 `SV820N_1` 时新增为 `SV820N_2`。`deviceVersion`、`productCode`、`protocol`、`internalPort` 会从 catalog/模板默认补齐。如果需要 100% 保留某型号厂商私有页面的全部底层字段，仍应优先让 `catalogKey` 命中 `templateAvailable=true` 的同型号模板，或显式复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`、`SYS_ETHERCAT.ecgvt`、`.hcp` 和 `.hcpp`，并保留运动轴、轴组尾部记录以及 AutoShop 追加在最后一个从站后的私有尾部记录，不会在新增从站时把这些尾部记录插到新从站前面。
 确实只需要基础 ESI 实例时，可以额外设置 `"allowGeneratedFromCatalog": true`；该模式只承诺写入身份、同步、PDO 元数据和通用参数，不承诺覆盖厂家私有配置页隐藏字段，也不保证 AutoShop 工程树会把该基础实例识别为可见从站。像 `SV820_3Axis_V3.03` 这种 ESI 中带模块定义的多轴伺服会导出 `requiresTemplateForCatalogGeneration=true`，CLI 会拒绝基础生成，因为手动样本包含大量 AutoShop 私有模块记录和主站记录；需要界面可见且可完整编辑时，必须使用 AutoShop 手动创建过的同型号模板、`templateKey` 或完整 `segmentBase64`。
 
 注意：SV510 页面里的“同步单元周期 x1/x2”与当前已命名的 `cycleTimeAUs/BUs/CUs` 不是同一个可见联动字段；目前只能可靠导出/应用专家模式、同步模式、周期记录和完整私有 records，不能承诺用 JSON 直接把该下拉从 `x1` 切到 `x2`。
