@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.56`。
+适用版本：`autoshop-agent.exe v0.8.57`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -224,6 +224,8 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
   "name": "GR10-4ADE-CLONE"
 }
 ```
+
+使用 `templateKey` 新增从站时，CLI 会克隆完整私有从站段，并自动重写 AutoShop 拓扑字段：`autoIncrementAddress`、`physicalAddress`、`positionIndex`、`stationIndex`、`slaveTreeIndex`，同时重写段内 `_IQ/_Q` 等站号引用；这些字段只有在用户显式改成不同于模板值时才会按用户值保留。`name` / `parameters.deviceName` 不要填任意显示名，必须保持 AutoShop/ESI 可识别的型号名或同型号实例名，例如 `GL20-RTU-ECT_3`；随意写 `JSON_xxx` 这类名称会导致 AutoShop 打开时找不到 XML 或出现乱码节点。
 
 新增设备库型号时可以直接使用 `catalogKey`：
 
