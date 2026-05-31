@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.57`。
+适用版本：`autoshop-agent.exe v0.8.58`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -213,7 +213,7 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 | `cycleTimeAUs` / `cycleTimeBUs` / `cycleTimeCUs` | 从站通用周期字段。 |
 | `deviceName` / `deviceVersion` / `productCode` / `protocol` / `internalPort` | 设备身份和内部端口字段。 |
 
-`ethercat.catalog` 从 AutoShop 安装目录的 `xml/*.xml` 解析 ESI 设备库。每个设备会列出 `key`、型号、ProductCode、Revision、同步管理器、Rx/Tx PDO、DC 模式和 `templateAvailable`。如果 `templateAvailable=true`，说明当前工程已有同型号从站，新增时会优先克隆完整私有 `segmentBase64` 模板；如果为 `false`，默认会拒绝用该 `catalogKey` 新增，以避免把 ESI 基础实例误认为完整 AutoShop UI 参数保真。
+`ethercat.catalog` 从 AutoShop 安装目录的 `xml/*.xml` 解析 ESI 设备库。每个设备会列出 `key`、型号、ProductCode、Revision、同步管理器、Rx/Tx PDO、DC 模式和 `templateAvailable`；没有设备名或 ProductCode 的 ESI 父占位项不会导出为可新增型号。如果 `templateAvailable=true`，说明当前工程已有同型号从站，新增时会优先克隆完整私有 `segmentBase64` 模板，并同时复制/重排对应主站记录和 `SYS_ETHERCAT.ecgvt` 系统变量行；如果为 `false`，默认会拒绝用该 `catalogKey` 新增，以避免把 ESI 基础实例误认为完整 AutoShop UI 参数保真。
 
 修改既有从站时，保留数组顺序并改对应对象的 `parameters` 或 `records[].value`。删除从站时，直接删除对应 `slaves[]` 对象。新增同型号从站时，在数组末尾追加最小对象：
 
@@ -232,16 +232,14 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 ```json
 {
   "key": "slave_011_SV520N",
-  "name": "SV520N_JSON",
   "catalogKey": "ecat:SV520N-Ecat_v012:SV520N:c030a:10001",
-  "allowGeneratedFromCatalog": true,
   "parameters": {
     "expertSettingsEnabled": true
   }
 }
 ```
 
-如果需要 100% 保留某型号厂商私有页面的全部底层字段，仍应优先让 `catalogKey` 命中 `templateAvailable=true` 的同型号模板，或显式复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`，并保留运动轴、轴组尾部记录不被从站增删改覆盖。
+当 `catalogKey` 命中 `templateAvailable=true` 时，新增对象可以只填 `key`、`catalogKey` 和需要覆盖的 `parameters`；`deviceName`、`deviceVersion`、`productCode`、`protocol`、`internalPort` 会从 catalog/模板默认补齐。如果需要 100% 保留某型号厂商私有页面的全部底层字段，仍应优先让 `catalogKey` 命中 `templateAvailable=true` 的同型号模板，或显式复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK` 和 `SYS_ETHERCAT.ecgvt`，并保留运动轴、轴组尾部记录不被从站增删改覆盖。
 确实只需要基础 ESI 实例时，可以额外设置 `"allowGeneratedFromCatalog": true`；该模式只承诺写入身份、同步、PDO 元数据和通用参数，不承诺覆盖厂家私有配置页隐藏字段，也不保证 AutoShop 工程树会把该基础实例识别为可见从站。需要界面可见且可完整编辑的从站时，必须使用 AutoShop 手动创建过的同型号模板、`templateKey` 或完整 `segmentBase64`。
 
 注意：SV510 页面里的“同步单元周期 x1/x2”与当前已命名的 `cycleTimeAUs/BUs/CUs` 不是同一个可见联动字段；目前只能可靠导出/应用专家模式、同步模式、周期记录和完整私有 records，不能承诺用 JSON 直接把该下拉从 `x1` 切到 `x2`。
