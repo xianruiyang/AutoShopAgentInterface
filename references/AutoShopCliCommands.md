@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.58`。
+适用版本：`autoshop-agent.exe v0.8.59`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -334,7 +334,7 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使用 `INT`、`DINT`、`REAL`。这是 AutoShop 当前 Adapter I/O 数据集下拉的实际限制；虽然 EtherNet/IP 标签层还存在 `BOOL`、`BYTE`、`STRING` 等通用类型，但这些不能作为 Adapter I/O 数据集类型写入。`workspace apply` 会拒绝不在 `availableAdapterDataTypes` 中的类型。
 
-`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除；新增同型号/同结构设备时追加带 `templateKey` 的对象；新增 EDS 设备时可追加带 `catalogKey` 的对象。`catalogKey` 来自 `ethernetIP.catalog.devices[].key`。如果同型号 `templateAvailable=true`，apply 会优先克隆完整工程模板；否则默认拒绝新增，以避免把 EDS 基础 identity 记录误认为完整 AutoShop UI 参数保真。确实只需要基础 EDS 设备记录时，显式设置 `"allowGeneratedFromCatalog": true`。
+`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除，写成空数组 `[]` 会清空 EtherNet/IP 从站设备表；新增同型号/同结构设备时追加带 `templateKey` 的对象；新增 EDS 设备时可追加带 `catalogKey` 的对象。`catalogKey` 来自 `ethernetIP.catalog.devices[].key`。如果同型号 `templateAvailable=true`，apply 会优先克隆完整工程模板，并从 catalog 默认补齐 `vendorId`、`productType`、`productCode`、`majorRevision`、`minorRevision` 等身份字段；否则默认拒绝新增，以避免把 EDS 基础 identity 记录误认为完整 AutoShop UI 参数保真。确实只需要基础 EDS 设备记录时，显式设置 `"allowGeneratedFromCatalog": true`。
 
 常用 `devices[]` 字段：
 
