@@ -340,6 +340,10 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 
 `deviceLibraryPath` 可指向模板库根目录或 `ethernet-ip/index.json` 所在目录；当前正式库在 `D:\program\PLC\AutoShopAgentInterfaceWork\device-library`。`EIP_Card`、`Easy`、`H5U` 已有 `records + privateRecords` 模板，可用最小 JSON 新增并在 apply 后回读补全；`Generic_EtherNet_IP_device` 已作为 private-only 模板接入，可通过 `toolboxName` 新增、删除和保真回读，但没有 primary device records，字段级编辑以 `privateRecords` 中已识别的值为准。
 
+新增/重排 EtherNet/IP 设备时，CLI 会按 `devices[]` 顺序自动实例化 AutoShop 需要联动的字段：`records` 中的 `deviceIndex`、私有工程树记录中的实例序号、IP、primary 关联序号，以及 `Easy`/`H5U` 等设备的 `_IPn_2`/`_IPn_3` I/O 变量名。`EIP_Card` 会保留完整 441 条私有记录并按实例序号重命名 `_IPn_*` 变量前缀。正常使用时不建议手工改这些联动字段；若 JSON 中只填写 `toolboxName` 和必要参数，`workspace apply` 后再 `workspace export` 会回读补全完整 `records` 与 `privateRecords`。
+
+`workspace apply` 还会同步 `SYS_EIP.eIPgvt`：删除设备时移除旧 `_IPn_*` 系统变量，新增 `EIP_Card` 时补齐 `_IPn_2` 到 `_IPn_53`，新增 `Easy`/`H5U` 等普通 primary 设备时补齐 `_IPn_2`/`_IPn_3`。如果导出的 JSON 没有语义变化，apply 不会为了“规范化”私有字节而重写 `EIP.dat`，因此 `workspace export -> workspace apply --dry-run` 应保持无实际变更。
+
 常用 `devices[]` 字段：
 
 | 字段 | 含义 |
@@ -352,6 +356,7 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 | `vendorId` / `productType` / `productCode` / `majorRevision` / `minorRevision` | EDS/CIP 身份字段。 |
 | `parameters` | 已确认设备字段，优先编辑这里。 |
 | `records` | 设备完整 AutoShop 私有记录视图，用于型号专属字段保真和兜底编辑。 |
+| `privateRecords` | AutoShop 工程树使用的私有 `0x20` 记录；导出用于保真和诊断，普通新增优先通过模板库补全。 |
 
 示例：用当前工程的 H5U 模板克隆一个 Easy：
 
@@ -384,7 +389,7 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 }
 ```
 
-`workspace apply` 会重建 `EIP.dat`，并同步 `EIP.datBAK`；原文件带有效尾部 CRC32 时会重算校验。EtherNet/IP 设备新增/删除会同步 `devices[].records` 主记录和 `devices[].privateRecords` 私有 `0x20` 工程树记录；`Generic_EtherNet_IP_device` 属于 private-only 设备，可通过 `toolboxName` 从设备库新增，但不会生成 primary device records。`EIP.data`、`SYS_EIP.eIPgvt` 仍作为真实成员文件保留在 `files` 中。
+`workspace apply` 会重建 `EIP.dat`，并同步 `EIP.datBAK`；原文件带有效尾部 CRC32 时会重算校验。EtherNet/IP 设备新增/删除会同步 `devices[].records` 主记录、`devices[].privateRecords` 私有 `0x20` 工程树记录和 `SYS_EIP.eIPgvt` 系统变量表；`Generic_EtherNet_IP_device` 属于 private-only 设备，可通过 `toolboxName` 从设备库新增，但不会生成 primary device records。`EIP.data` 仍作为真实成员文件保留在 `files` 中。
 
 ## 5. 完整指令索引
 
