@@ -332,11 +332,13 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `adapter.connections[].inputDatasets` | 输入数据集。 |
 | `availableDataTypes` | 服务消息标签等通用 EtherNet/IP 标签类型参考。 |
 | `availableAdapterDataTypes` | Adapter I/O 数据集的 AutoShop UI 实际可选类型。 |
-| `catalog` | 从 AutoShop `sys/EipEds/*.eds` 解析出的 EtherNet/IP 设备库。 |
+| `catalog` | 从 AutoShop `sys/EipEds/*.eds` 和 `deviceLibraryPath` 指向的设备模板库合并出的 EtherNet/IP 设备库。 |
 
 Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使用 `INT`、`DINT`、`REAL`。这是 AutoShop 当前 Adapter I/O 数据集下拉的实际限制；虽然 EtherNet/IP 标签层还存在 `BOOL`、`BYTE`、`STRING` 等通用类型，但这些不能作为 Adapter I/O 数据集类型写入。`workspace apply` 会拒绝不在 `availableAdapterDataTypes` 中的类型。
 
-`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除，写成空数组 `[]` 会清空 EtherNet/IP 从站设备表；新增同型号/同结构设备时追加带 `templateKey` 的对象；从设备库新增时优先追加带 `toolboxName` 的对象，值写 AutoShop 工具箱里的名称。`catalogKey` 来自 `ethernetIP.catalog.devices[].key`，仅作为高级诊断字段。如果同型号 `templateAvailable=true`，apply 会优先克隆完整工程模板，并从 catalog 默认补齐 `vendorId`、`productType`、`productCode`、`majorRevision`、`minorRevision` 等身份字段；否则默认拒绝新增，以避免把 EDS 基础 identity 记录误认为完整 AutoShop UI 参数保真。确实只需要基础 EDS 设备记录时，显式设置 `"allowGeneratedFromCatalog": true`。
+`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除，写成空数组 `[]` 会清空 EtherNet/IP 从站设备表；新增同型号/同结构设备时追加带 `templateKey` 的对象；从设备库新增时优先追加带 `toolboxName` 的对象，值写 AutoShop 工具箱里的名称。`catalogKey` 来自 `ethernetIP.catalog.devices[].key`，仅作为高级诊断字段。如果同型号 `templateAvailable=true`，apply 会优先克隆完整工程模板；当前工程没有同型号模板但 `deviceLibraryPath` 指向的模板库存在语义模板时，会从模板库克隆完整 `records`；然后从 catalog 默认补齐 `vendorId`、`productType`、`productCode`、`majorRevision`、`minorRevision` 等身份字段。仍没有语义模板时默认拒绝，避免把 EDS 基础 identity 记录误认为完整 AutoShop UI 参数保真。确实只需要基础 EDS 设备记录时，显式设置 `"allowGeneratedFromCatalog": true`。
+
+`deviceLibraryPath` 可指向模板库根目录或 `ethernet-ip/index.json` 所在目录；当前正式库在 `D:\program\PLC\AutoShopAgentInterfaceWork\device-library`。`EIP_Card`、`Easy`、`H5U` 已有语义模板，可用最小 JSON 新增并在 apply 后回读补全；`Generic_EtherNet_IP_device` 目前仅采集为原始 `EIP.dat` 保真模板，不能通过 `ethernetIP.devices[]` 做字段级新增，CLI 会拒绝把它当作语义模板写入。
 
 常用 `devices[]` 字段：
 
@@ -345,7 +347,7 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 | `key` | 本次导出的稳定键；`templateKey` 引用它。 |
 | `toolboxName` | 新增设备时首选填写的 AutoShop 工具箱叶子名称，例如 `H5U`、`Easy`、`EIP_Card`。 |
 | `name` / `catalogKey` | 根据 Vendor/Product/Revision 推断的设备名和身份键；`catalogKey` 仅作为高级诊断字段。 |
-| `allowGeneratedFromCatalog` | 默认 `false`。没有同型号模板时，CLI 会拒绝新增以保证 AutoShop UI 参数保真；显式设为 `true` 才允许按 EDS 生成基础设备记录。 |
+| `allowGeneratedFromCatalog` | 默认 `false`。没有当前工程模板和外部语义模板时，CLI 会拒绝新增以保证 AutoShop UI 参数保真；显式设为 `true` 才允许按 EDS 生成基础设备记录。 |
 | `ipAddress` | 设备 IP。 |
 | `vendorId` / `productType` / `productCode` / `majorRevision` / `minorRevision` | EDS/CIP 身份字段。 |
 | `parameters` | 已确认设备字段，优先编辑这里。 |
@@ -373,7 +375,6 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 {
   "key": "device_002_Easy",
   "toolboxName": "Easy",
-  "allowGeneratedFromCatalog": true,
   "ipAddress": "192.168.1.77",
   "parameters": {
     "outputSizeBytes": 120,
@@ -390,7 +391,7 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 ### 5.1 config
 
 ```powershell
-autoshop-agent.exe config init [--config path] [--project dir] [--autoshop-exe path] [--force]
+autoshop-agent.exe config init [--config path] [--project dir] [--autoshop-exe path] [--device-library path] [--force]
 autoshop-agent.exe config show [--config path] [--format json]
 autoshop-agent.exe config validate [--config path]
 autoshop-agent.exe config get <key> [--config path]
