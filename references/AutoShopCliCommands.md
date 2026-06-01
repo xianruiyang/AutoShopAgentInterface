@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.64`。
+适用版本：`autoshop-agent.exe v0.8.65`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -94,8 +94,8 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | 配置/模块配置 | `配置/模块配置/_node.config.json` | 优先改 `moduleConfig.modules` 和每槽位 `moduleParameters`。 |
 | 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
 | 配置/轴组设置 | `配置/轴组设置/_node.config.json` | 优先改 `axisGroup.groups[].parameters`。 |
-| 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`；`ethercat.catalog` 提供 ESI 设备库 `catalogKey`。 |
-| 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP.devices`、标签、连接和 I/O 数据集；`ethernetIP.catalog` 提供 EDS 设备库 `catalogKey`。 |
+| 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`；新增从站优先写 AutoShop 工具箱叶子名称 `toolboxName`，`catalogKey` 仅用于高级诊断。 |
+| 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP.devices`、标签、连接和 I/O 数据集；新增设备优先写 AutoShop 工具箱叶子名称 `toolboxName`，`catalogKey` 仅用于高级诊断。 |
 | 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
 
 Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配置/COM0` 在 workspace 中是 `配置/COM0_/_node.config.json`，JSON 内 `treePath` 仍保留原始树路径。
@@ -194,7 +194,8 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 | --- | --- |
 | `key` | 本次导出的稳定键；删除从站时从数组移除对应对象。 |
 | `templateKey` | 新增从站时使用的模板键，指向当前工程中已有从站的 `key`。 |
-| `catalogKey` | 新增从站时使用的设备库键，来自 `ethercat.catalog.devices[].key`；也可以填 `ethercat.catalog.devices[].aliases[]` 中的 UI 型号别名。有同型号模板时自动克隆模板。 |
+| `toolboxName` | 新增从站时首选填写的 AutoShop 工具箱叶子名称，例如 `SV820_3Axis_V3.03`、`GL10-RTU-ECTA_2.0.7.0`。CLI 会用它映射到内部 ESI 型号、ProductCode、Revision 和模板。 |
+| `catalogKey` | 高级诊断字段，来自 `ethercat.catalog.devices[].key` 或 `aliases[]`；正常 JSON 不应要求用户手写它。 |
 | `allowGeneratedFromCatalog` | 默认 `false`。没有同型号模板时，CLI 会拒绝新增以保证 AutoShop UI 参数保真；显式设为 `true` 才允许按 ESI 生成基础从站段。若 catalog 标记 `requiresTemplateForCatalogGeneration=true`，即使显式允许也会拒绝基础生成，必须先在 AutoShop 创建样本、使用 `templateKey` 或提供完整 `segmentBase64`。 |
 | `allowIdentityOverride` | 默认 `false`。仅用于高级诊断；设为 `true` 才允许绕过 ESI 身份校验写入不匹配的 `deviceName` / `productCode` 等字段。正常工程不要使用。 |
 | `name` / `deviceVersion` / `productCode` / `protocol` | 从 `0x20000121` 等通用记录解析出的设备身份信息；`deviceName` 是 AutoShop 查找 ESI XML 的关键字段，只允许 ESI 型号名或数字副本后缀，例如 `SV820N`、`SV820N_1`。 |
@@ -214,7 +215,7 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 | `cycleTimeAUs` / `cycleTimeBUs` / `cycleTimeCUs` | 从站通用周期字段。 |
 | `deviceName` / `deviceVersion` / `productCode` / `protocol` / `internalPort` | 设备身份和内部端口字段。 |
 
-`ethercat.catalog` 从 AutoShop 安装目录的 `xml/*.xml` 解析 ESI 设备库。每个设备会列出 `key`、`aliases`、型号、ProductCode、Revision、同步管理器、Rx/Tx PDO、DC 模式、`templateAvailable` 和必要时的 `requiresTemplateForCatalogGeneration`；没有设备名或 ProductCode 的 ESI 父占位项不会导出为可新增型号。如果 `templateAvailable=true`，说明当前工程已有同型号从站，新增时会优先克隆完整私有 `segmentBase64` 模板，并同时复制/重排对应主站记录和 `SYS_ETHERCAT.ecgvt` 系统变量行；如果为 `false`，默认会拒绝用该 `catalogKey` 新增，以避免把 ESI 基础实例误认为完整 AutoShop UI 参数保真。
+`ethercat.catalog` 从 AutoShop 安装目录的 `xml/*.xml` 解析 ESI 设备库。每个设备会列出 `toolboxName`、`key`、`aliases`、内部型号 `name`、ProductCode、Revision、同步管理器、Rx/Tx PDO、DC 模式、`templateAvailable` 和必要时的 `requiresTemplateForCatalogGeneration`。`toolboxName` 是正常 JSON 应写的 AutoShop 工具箱名称；内部型号 `name` 只用于 AutoShop 查找 XML 和诊断。没有设备名或 ProductCode 的 ESI 父占位项不会导出为可新增型号。如果 `templateAvailable=true`，说明当前工程已有同型号从站，新增时会优先克隆完整私有 `segmentBase64` 模板，并同时复制/重排对应主站记录和 `SYS_ETHERCAT.ecgvt` 系统变量行；如果为 `false`，默认会拒绝用该设备新增，以避免把 ESI 基础实例误认为完整 AutoShop UI 参数保真。
 
 修改既有从站时，保留数组顺序并改对应对象的 `parameters` 或 `records[].value`。删除从站时，直接删除对应 `slaves[]` 对象。新增同型号从站时，在数组末尾追加最小对象：
 
@@ -228,19 +229,19 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 
 使用 `templateKey` 新增从站时，CLI 会克隆完整私有从站段，并自动重写 AutoShop 拓扑字段：`autoIncrementAddress`、`physicalAddress`、`positionIndex`、`stationIndex`、`slaveTreeIndex`，同时重写段内 `_IQ/_Q` 等站号引用；这些字段只有在用户显式改成不同于模板值时才会按用户值保留。`name` / `parameters.deviceName` 不要填任意显示名，必须保持 AutoShop/ESI 可识别的型号名或数字副本后缀，例如 `GL20-RTU-ECT`、`GL20-RTU-ECT_3`；随意写 `JSON_xxx` 这类名称会被 `workspace apply` 拒绝，避免 AutoShop 打开工程时报找不到 XML。
 
-新增设备库型号时可以直接使用 `catalogKey`：
+新增设备库型号时优先使用 `toolboxName`：
 
 ```json
 {
   "key": "slave_011_SV520N",
-  "catalogKey": "ecat:SV520N-Ecat_v012:SV520N:c030a:10001",
+  "toolboxName": "SV520N-Ecat_v0.1.2",
   "parameters": {
     "expertSettingsEnabled": true
   }
 }
 ```
 
-当 `catalogKey` 命中 `templateAvailable=true` 时，新增对象可以只填 `key`、`catalogKey` 和需要覆盖的 `parameters`；`deviceName` 未填写时会自动生成 AutoShop 可识别的数字副本名，例如已有 `SV820N` 和 `SV820N_1` 时新增为 `SV820N_2`。`deviceVersion`、`productCode`、`protocol`、`internalPort` 会从 catalog/模板默认补齐。如果需要 100% 保留某型号厂商私有页面的全部底层字段，仍应优先让 `catalogKey` 命中 `templateAvailable=true` 的同型号模板，或显式复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`、`SYS_ETHERCAT.ecgvt`、`.hcp` 和 `.hcpp`，并保留运动轴、轴组尾部记录以及 AutoShop 追加在最后一个从站后的私有尾部记录，不会在新增从站时把这些尾部记录插到新从站前面。
+当 `toolboxName` 命中 `templateAvailable=true` 时，新增对象可以只填 `key`、`toolboxName` 和需要覆盖的 `parameters`；`deviceName` 未填写时会自动生成 AutoShop 可识别的数字副本名，例如已有 `SV820N` 和 `SV820N_1` 时新增为 `SV820N_2`。`deviceVersion`、`productCode`、`protocol`、`internalPort` 会从 catalog/模板默认补齐。如果需要 100% 保留某型号厂商私有页面的全部底层字段，仍应优先让 `toolboxName` 命中 `templateAvailable=true` 的同型号模板，或显式复制带 `segmentBase64` 的从站对象。写回会同步 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`、`SYS_ETHERCAT.ecgvt`、`.hcp` 和 `.hcpp`，并保留运动轴、轴组尾部记录以及 AutoShop 追加在最后一个从站后的私有尾部记录，不会在新增从站时把这些尾部记录插到新从站前面。
 确实只需要基础 ESI 实例时，可以额外设置 `"allowGeneratedFromCatalog": true`；该模式只承诺写入身份、同步、PDO 元数据和通用参数，不承诺覆盖厂家私有配置页隐藏字段，也不保证 AutoShop 工程树会把该基础实例识别为可见从站。像 `SV820_3Axis_V3.03` 这种 ESI 中带模块定义的多轴伺服会导出 `requiresTemplateForCatalogGeneration=true`，CLI 会拒绝基础生成，因为手动样本包含大量 AutoShop 私有模块记录和主站记录；需要界面可见且可完整编辑时，必须使用 AutoShop 手动创建过的同型号模板、`templateKey` 或完整 `segmentBase64`。
 
 注意：SV510 页面里的“同步单元周期 x1/x2”与当前已命名的 `cycleTimeAUs/BUs/CUs` 不是同一个可见联动字段；目前只能可靠导出/应用专家模式、同步模式、周期记录和完整私有 records，不能承诺用 JSON 直接把该下拉从 `x1` 切到 `x2`。
@@ -335,14 +336,15 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使用 `INT`、`DINT`、`REAL`。这是 AutoShop 当前 Adapter I/O 数据集下拉的实际限制；虽然 EtherNet/IP 标签层还存在 `BOOL`、`BYTE`、`STRING` 等通用类型，但这些不能作为 Adapter I/O 数据集类型写入。`workspace apply` 会拒绝不在 `availableAdapterDataTypes` 中的类型。
 
-`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除，写成空数组 `[]` 会清空 EtherNet/IP 从站设备表；新增同型号/同结构设备时追加带 `templateKey` 的对象；新增 EDS 设备时可追加带 `catalogKey` 的对象。`catalogKey` 来自 `ethernetIP.catalog.devices[].key`。如果同型号 `templateAvailable=true`，apply 会优先克隆完整工程模板，并从 catalog 默认补齐 `vendorId`、`productType`、`productCode`、`majorRevision`、`minorRevision` 等身份字段；否则默认拒绝新增，以避免把 EDS 基础 identity 记录误认为完整 AutoShop UI 参数保真。确实只需要基础 EDS 设备记录时，显式设置 `"allowGeneratedFromCatalog": true`。
+`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除，写成空数组 `[]` 会清空 EtherNet/IP 从站设备表；新增同型号/同结构设备时追加带 `templateKey` 的对象；从设备库新增时优先追加带 `toolboxName` 的对象，值写 AutoShop 工具箱里的名称。`catalogKey` 来自 `ethernetIP.catalog.devices[].key`，仅作为高级诊断字段。如果同型号 `templateAvailable=true`，apply 会优先克隆完整工程模板，并从 catalog 默认补齐 `vendorId`、`productType`、`productCode`、`majorRevision`、`minorRevision` 等身份字段；否则默认拒绝新增，以避免把 EDS 基础 identity 记录误认为完整 AutoShop UI 参数保真。确实只需要基础 EDS 设备记录时，显式设置 `"allowGeneratedFromCatalog": true`。
 
 常用 `devices[]` 字段：
 
 | 字段 | 含义 |
 | --- | --- |
 | `key` | 本次导出的稳定键；`templateKey` 引用它。 |
-| `name` / `catalogKey` | 根据 Vendor/Product/Revision 推断的设备名和身份键；新增设备时可只填 `catalogKey`、`key` 和必要的 `ipAddress`，但无模板时还必须显式允许基础生成。 |
+| `toolboxName` | 新增设备时首选填写的 AutoShop 工具箱叶子名称，例如 `H5U`、`Easy`、`EIP_Card`。 |
+| `name` / `catalogKey` | 根据 Vendor/Product/Revision 推断的设备名和身份键；`catalogKey` 仅作为高级诊断字段。 |
 | `allowGeneratedFromCatalog` | 默认 `false`。没有同型号模板时，CLI 会拒绝新增以保证 AutoShop UI 参数保真；显式设为 `true` 才允许按 EDS 生成基础设备记录。 |
 | `ipAddress` | 设备 IP。 |
 | `vendorId` / `productType` / `productCode` / `majorRevision` / `minorRevision` | EDS/CIP 身份字段。 |
@@ -365,12 +367,12 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 }
 ```
 
-示例：直接用 EDS 设备库新增 Easy：
+示例：直接用 AutoShop 工具箱名称新增 Easy：
 
 ```json
 {
   "key": "device_002_Easy",
-  "catalogKey": "vendor:1660/productType:14/productCode:269/revision:1.1",
+  "toolboxName": "Easy",
   "allowGeneratedFromCatalog": true,
   "ipAddress": "192.168.1.77",
   "parameters": {
