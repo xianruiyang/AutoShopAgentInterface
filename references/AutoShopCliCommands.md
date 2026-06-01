@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.68`。
+适用版本：`autoshop-agent.exe v0.8.70`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -340,7 +340,7 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 
 `deviceLibraryPath` 可指向模板库根目录或 `ethernet-ip/index.json` 所在目录；当前正式库在 `D:\program\PLC\AutoShopAgentInterfaceWork\device-library`。`EIP_Card`、`Easy`、`H5U` 已有 `records + privateRecords` 模板，可用最小 JSON 新增并在 apply 后回读补全；`Generic_EtherNet_IP_device` 已作为 private-only 模板接入，可通过 `toolboxName` 新增、删除和保真回读，但没有 primary device records，字段级编辑以 `privateRecords` 中已识别的值为准。
 
-新增/重排 EtherNet/IP 设备时，CLI 会按 `devices[]` 顺序自动实例化 AutoShop 需要联动的字段：`records` 中的 `deviceIndex`、私有工程树记录中的实例序号、IP、primary 关联序号，以及 `Easy`/`H5U` 等设备的 `_IPn_2`/`_IPn_3` I/O 变量名。`EIP_Card` 会保留完整 441 条私有记录并按实例序号重命名 `_IPn_*` 变量前缀。正常使用时不建议手工改这些联动字段；若 JSON 中只填写 `toolboxName` 和必要参数，`workspace apply` 后再 `workspace export` 会回读补全完整 `records` 与 `privateRecords`。
+新增/重排 EtherNet/IP 设备时，CLI 会自动实例化 AutoShop 需要联动的字段：`records` 中的 `deviceIndex`、私有工程树记录中的设备类型码、IP、primary 关联序号，以及 `Easy`/`H5U` 等设备的 `_IPn_2`/`_IPn_3` I/O 变量名。已确认的私有设备类型码为 `EIP_Card=0`、`Easy=1`、`H5U=2`、`Generic_EtherNet_IP_device=3`；`Generic_EtherNet_IP_device` 属于 private-only 设备，没有 primary records，CLI 会把其工程树码写为 AutoShop 样本确认的 `7`。`EIP_Card` 会保留完整 441 条私有记录并按实例序号重命名 `_IPn_*` 变量前缀。正常使用时不建议手工改这些联动字段；若 JSON 中只填写 `toolboxName` 和必要参数，`workspace apply` 后再 `workspace export` 会回读补全完整 `records` 与 `privateRecords`。
 
 `workspace apply` 还会同步 `SYS_EIP.eIPgvt`：删除设备时移除旧 `_IPn_*` 系统变量，新增 `EIP_Card` 时补齐 `_IPn_2` 到 `_IPn_53`，新增 `Easy`/`H5U` 等普通 primary 设备时补齐 `_IPn_2`/`_IPn_3`。如果导出的 JSON 没有语义变化，apply 不会为了“规范化”私有字节而重写 `EIP.dat`，因此 `workspace export -> workspace apply --dry-run` 应保持无实际变更。
 
