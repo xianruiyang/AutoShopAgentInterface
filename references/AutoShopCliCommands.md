@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.65`。
+适用版本：`autoshop-agent.exe v0.8.67`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -336,9 +336,9 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使用 `INT`、`DINT`、`REAL`。这是 AutoShop 当前 Adapter I/O 数据集下拉的实际限制；虽然 EtherNet/IP 标签层还存在 `BOOL`、`BYTE`、`STRING` 等通用类型，但这些不能作为 Adapter I/O 数据集类型写入。`workspace apply` 会拒绝不在 `availableAdapterDataTypes` 中的类型。
 
-`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters` 或 `records[].value`；删除设备时从数组移除，写成空数组 `[]` 会清空 EtherNet/IP 从站设备表；新增同型号/同结构设备时追加带 `templateKey` 的对象；从设备库新增时优先追加带 `toolboxName` 的对象，值写 AutoShop 工具箱里的名称。`catalogKey` 来自 `ethernetIP.catalog.devices[].key`，仅作为高级诊断字段。如果同型号 `templateAvailable=true`，apply 会优先克隆完整工程模板；当前工程没有同型号模板但 `deviceLibraryPath` 指向的模板库存在语义模板时，会从模板库克隆完整 `records`；然后从 catalog 默认补齐 `vendorId`、`productType`、`productCode`、`majorRevision`、`minorRevision` 等身份字段。仍没有语义模板时默认拒绝，避免把 EDS 基础 identity 记录误认为完整 AutoShop UI 参数保真。确实只需要基础 EDS 设备记录时，显式设置 `"allowGeneratedFromCatalog": true`。
+`ethernetIP.devices` 的编辑规则与 EtherCAT 顶层从站一致：修改既有设备时改对应对象的顶层字段、`parameters`、`records[].value` 或 `privateRecords[].value`；删除设备时从数组移除，写成空数组 `[]` 会清空 EtherNet/IP 从站设备表；新增同型号/同结构设备时追加带 `templateKey` 的对象；从设备库新增时优先追加带 `toolboxName` 的对象，值写 AutoShop 工具箱里的名称。`catalogKey` 来自 `ethernetIP.catalog.devices[].key`，仅作为高级诊断字段。如果同型号 `templateAvailable=true`，apply 会优先克隆完整工程模板；当前工程没有同型号模板但 `deviceLibraryPath` 指向的模板库存在模板时，会从模板库克隆完整 `records` 和/或私有 `0x20` 工程树记录；然后从 catalog 默认补齐 `vendorId`、`productType`、`productCode`、`majorRevision`、`minorRevision` 等身份字段。仍没有模板时默认拒绝，避免把 EDS 基础 identity 记录误认为完整 AutoShop UI 参数保真。确实只需要基础 EDS 设备记录时，显式设置 `"allowGeneratedFromCatalog": true`。
 
-`deviceLibraryPath` 可指向模板库根目录或 `ethernet-ip/index.json` 所在目录；当前正式库在 `D:\program\PLC\AutoShopAgentInterfaceWork\device-library`。`EIP_Card`、`Easy`、`H5U` 已有语义模板，可用最小 JSON 新增并在 apply 后回读补全；`Generic_EtherNet_IP_device` 目前仅采集为原始 `EIP.dat` 保真模板，不能通过 `ethernetIP.devices[]` 做字段级新增，CLI 会拒绝把它当作语义模板写入。
+`deviceLibraryPath` 可指向模板库根目录或 `ethernet-ip/index.json` 所在目录；当前正式库在 `D:\program\PLC\AutoShopAgentInterfaceWork\device-library`。`EIP_Card`、`Easy`、`H5U` 已有 `records + privateRecords` 模板，可用最小 JSON 新增并在 apply 后回读补全；`Generic_EtherNet_IP_device` 已作为 private-only 模板接入，可通过 `toolboxName` 新增、删除和保真回读，但没有 primary device records，字段级编辑以 `privateRecords` 中已识别的值为准。
 
 常用 `devices[]` 字段：
 
@@ -384,7 +384,7 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 }
 ```
 
-`workspace apply` 会重建 `EIP.dat`，并同步 `EIP.datBAK`；原文件带有效尾部 CRC32 时会重算校验。`EIP.data`、`SYS_EIP.eIPgvt` 仍作为真实成员文件保留在 `files` 中。
+`workspace apply` 会重建 `EIP.dat`，并同步 `EIP.datBAK`；原文件带有效尾部 CRC32 时会重算校验。EtherNet/IP 设备新增/删除会同步 `devices[].records` 主记录和 `devices[].privateRecords` 私有 `0x20` 工程树记录；`Generic_EtherNet_IP_device` 属于 private-only 设备，可通过 `toolboxName` 从设备库新增，但不会生成 primary device records。`EIP.data`、`SYS_EIP.eIPgvt` 仍作为真实成员文件保留在 `files` 中。
 
 ## 5. 完整指令索引
 
