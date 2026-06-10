@@ -47,7 +47,7 @@ D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui close-projec
 D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui restore-project --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
 ```
 
-`ui restore-project` 会优先在记录的同一个 AutoShop 进程中通过“打开工程”对话框恢复工程；只有原进程不存在时才退回到按工程文件启动 AutoShop。该流程默认通过指定窗口句柄发送 Win32 消息：`close-project` 通过 `WM_COMMAND` 关闭工程，`restore-project` 通过 `WM_COMMAND` 打开工程对话框、`WM_SETTEXT` 写入工程路径并确认；优先匹配菜单文本，AutoShop 使用自绘菜单导致 `GetMenu` 不可用时，会回退到从 AutoShop V4.10 资源确认的命令号 `32860`（关闭工程）和 `32859`（打开工程）。`ui close-project`、`ui restore-project`、`ui refresh-project`、`ui open`、`ui open-path`、`ui refresh`、`ui refresh-path`、`ui focus`、`ui close`、`ui tree`、`ui output`、`ui compile`、`ui compile-all`、`ui run`、`ui stop`、`ui monitor` 和 `ui screenshot` 默认启用后台窗口保护：保存 `WINDOWPLACEMENT` 和操作前前台窗口，把 AutoShop 主窗口完全移动到当前虚拟屏幕右下角外侧执行，完成后恢复原窗口位置、最大化/最小化状态；如果 AutoShop 在过程中抢到前台，CLI 会先尝试把前台还给原用户窗口；若 Windows 前台限制导致恢复失败且 AutoShop 仍占前台，会把 AutoShop 最小化作为兜底，保证用户前台窗口不被 AutoShop 长时间打断。所有 UI 操作仍不使用全局键盘、全局鼠标或剪贴板。
+`ui restore-project` 会优先在记录的同一个 AutoShop 进程中通过“打开工程”对话框恢复工程；只有原进程不存在时才退回到按工程文件启动 AutoShop。该流程默认通过指定窗口句柄发送 Win32 消息：`close-project` 通过 `WM_COMMAND` 关闭工程，`restore-project` 通过 `WM_COMMAND` 打开工程对话框、`WM_SETTEXT` 写入工程路径并确认；优先匹配菜单文本，AutoShop 使用自绘菜单导致 `GetMenu` 不可用时，会回退到从 AutoShop V4.10 资源确认的命令号 `32860`（关闭工程）和 `32859`（打开工程）。`ui close-project`、`ui restore-project`、`ui refresh-project`、`ui open`、`ui open-path`、`ui refresh`、`ui refresh-path`、`ui focus`、`ui close`、`ui tree`、`ui output`、`ui compile`、`ui compile-all`、`ui run`、`ui stop`、`ui download`、`ui upload`、`ui monitor` 和 `ui screenshot` 默认启用后台窗口保护：保存 `WINDOWPLACEMENT` 和操作前前台窗口，把 AutoShop 主窗口完全移动到当前虚拟屏幕右下角外侧执行，完成后恢复原窗口位置、最大化/最小化状态；如果 AutoShop 在过程中抢到前台，CLI 会先尝试把前台还给原用户窗口；若 Windows 前台限制导致恢复失败且 AutoShop 仍占前台，会把 AutoShop 最小化作为兜底，保证用户前台窗口不被 AutoShop 长时间打断。所有 UI 操作仍不使用全局键盘、全局鼠标或剪贴板。
 
 这些 UI 命令仍可能让 AutoShop 自己弹出模态对话框；`ui close-project` / `ui refresh-project` 对“工程已修改，是否保存?”提示默认选择保存，也可用 `--save-prompt discard` 不保存关闭、`--save-prompt cancel` 取消关闭、`--save-prompt fail` 保持失败并交给人工处理。其他非自动处理的工程错误或普通确认对话框仍会导致命令失败并报告需要人工处理。`ui screenshot` 使用 Win32 `PrintWindow`，默认同样强制离屏截图；`--restore-offscreen` 仅作为兼容参数保留，`--offscreen-visible 0` 表示完全离屏。
 
@@ -657,8 +657,10 @@ autoshop-agent.exe build updown --project <dir> --out <file.updown> [--include-s
 ### 5.8 target / online / monitor
 
 ```powershell
-autoshop-agent.exe target scan [--transport ethernet|usb] [--backend simulator] [--format json]
+autoshop-agent.exe target scan [--transport ethernet|usb|index:N|<visible-text>] [--backend simulator|hardware] [--timeout-ms 15000] [--format json]
+autoshop-agent.exe target transports --backend hardware [--timeout-ms 15000] [--format json]
 autoshop-agent.exe target connect --profile <name> [--backend simulator] [--format json]
+autoshop-agent.exe target connect --backend hardware [--profile <name>] [--transport ethernet|usb|index:N|<visible-text>] [--ip <plc-ip>] [--test=true|false] [--timeout-ms 15000] [--format json]
 autoshop-agent.exe target info --profile <name> [--format json]
 autoshop-agent.exe target login --profile <name> [--password <value>] [--format json]
 autoshop-agent.exe target logout --profile <name> [--format json]
@@ -684,7 +686,7 @@ autoshop-agent.exe monitor recipe save --profile <name> --project <dir> --out re
 autoshop-agent.exe monitor recipe apply --profile <name> --project <dir> --in recipe.json [--yes] [--format json]
 ```
 
-这些命令当前只操作本地模拟状态，不连接、不扫描、不运行、不停止、不下载、不上传真实 PLC。显式传 `--backend hardware` 会失败并提示硬件后端尚未实现。
+`target transports --backend hardware` 只读取 AutoShop `通讯设置` 下拉框的全部通讯类型，返回 `transports[].index/text/selected`，不点击搜索或测试。`target scan --backend hardware` 和 `target connect --backend hardware` 会复用 AutoShop 官方 UI 的 `工具 -> 通讯设置` 流程，并在后台窗口保护中执行：`scan` 选择通讯类型后点击搜索并返回 AutoShop 搜索列表数量；`connect` 选择通讯类型、必要时写入设备 IP、读回校验 `appliedIp`，默认点击 `测试`，AutoShop 返回已连通后点击 `确定`。`--transport` 可使用 `ethernet`、`usb`、`index:N`，也可直接传 AutoShop 下拉框中的可见文字；如果传 `--test=false`，CLI 只写入并确认通讯设置，不声明已连通。除这几个硬件入口外，本节其他 `target`、`online`、`monitor` 命令仍只操作本地模拟状态，不运行、不停止、不下载、不上传真实 PLC；真实 RUN/STOP/下载/上载/监控按钮仍使用 `ui run`、`ui stop`、`ui download`、`ui upload`、`ui monitor`。
 
 ### 5.9 trace / diagnose
 
@@ -751,6 +753,8 @@ autoshop-agent.exe ui compile [--timeout-ms 15000] [--lines errors|all] [--tail 
 autoshop-agent.exe ui compile-all [--timeout-ms 15000] [--lines errors|all] [--tail 200] [--dismiss-dialog=true] [--format json]
 autoshop-agent.exe ui run [--timeout-ms 15000] [--lines errors|all] [--tail 200] [--dismiss-dialog=true] [--format json]
 autoshop-agent.exe ui stop [--timeout-ms 15000] [--lines errors|all] [--tail 200] [--dismiss-dialog=true] [--format json]
+autoshop-agent.exe ui download [--yes] [--run-after] [--timeout-ms 15000] [--lines errors|all] [--tail 200] [--dismiss-dialog=true] [--format json]
+autoshop-agent.exe ui upload [--timeout-ms 15000] [--lines errors|all] [--tail 200] [--dismiss-dialog=true] [--format json]
 autoshop-agent.exe ui monitor [--timeout-ms 15000] [--lines errors|all] [--tail 200] [--dismiss-dialog=true] [--format json]
 autoshop-agent.exe ui output [--pane compile|communication|transfer|search|visible|all] [--lines errors|all] [--tail 0] [--format json]
 autoshop-agent.exe ui screenshot --out autoshop.png [--format json]
@@ -765,7 +769,7 @@ autoshop-agent.exe ui dev-h5u-tag-connection --row <n> [--inspect-only] [--input
 
 后台窗口保护会用 `SM_XVIRTUALSCREEN/SM_YVIRTUALSCREEN/SM_CXVIRTUALSCREEN/SM_CYVIRTUALSCREEN` 读取当前虚拟屏幕边界，按右下角外侧计算临时位置，因此兼容不同分辨率、缩放布局和带负坐标的多显示器。`--offscreen-visible` 大于 0 时会在屏幕边缘保留对应像素用于诊断；默认 `0` 表示完全离屏。操作结束后使用启动前保存的 `WINDOWPLACEMENT` 恢复 AutoShop 的原恢复矩形；若原来是最小化，使用不激活窗口的最小化状态恢复，避免用户从任务栏重新打开时窗口留在屏幕外；如果 AutoShop 截图期间抢到前台，会同样使用最小化兜底保护用户前台窗口。
 
-`ui compile` 对应 AutoShop 的 `Ctrl+F7` 编译按钮，`ui compile-all` 对应 `F7` 全部编译，`ui run` 对应 `F5` 运行，`ui stop` 对应 `F6` 停止，`ui monitor` 对应 `F3` 监控。它们在后台窗口保护内通过 AutoShop 主窗口句柄发送 `WM_COMMAND`，不会使用全局键盘、全局鼠标或剪贴板。JSON 返回包含 `commandId`、`shortcut`、`output`、`outputChanged` 和 `dialogs`；其中 `output` 来自下方“信息输出窗口”的 ListBox，`dialogs` 会采集本次命令新弹出的 AutoShop 模态提示文本和按钮。`--lines errors` 是默认值，只返回错误行；需要完整读取编译过程、时间戳和普通状态行时使用 `--lines all`。`--tail` 限制过滤后返回的末尾行数，`0` 表示全部；JSON 中 `output.count` 是控件总行数，`output.returnedCount` 是本次实际返回行数。`--dismiss-dialog=true` 会读取并自动确认 AutoShop 的连接状态类 `确定` 弹窗；`ui monitor` / `ui run` / `ui stop` 会优先处理这类弹窗，避免循环调用时堆积大量模态窗口。若需要人工保留弹窗可设为 `false`。
+`ui compile` 对应 AutoShop 的 `Ctrl+F7` 编译按钮，`ui compile-all` 对应 `F7` 全部编译，`ui run` 对应 `F5` 运行，`ui stop` 对应 `F6` 停止，`ui download` 对应 `F8` 下载，`ui upload` 对应 `F9` 上载，`ui monitor` 对应 `F3` 监控。它们在后台窗口保护内通过 AutoShop 主窗口句柄发送 `WM_COMMAND`，不会使用全局键盘、全局鼠标或剪贴板。JSON 返回包含 `commandId`、`shortcut`、`output`、`outputChanged` 和 `dialogs`；其中 `output` 来自下方“信息输出窗口”的 ListBox，`dialogs` 会采集本次命令新弹出的 AutoShop 模态提示文本和按钮。`--lines errors` 是默认值，只返回错误行；需要完整读取编译过程、时间戳和普通状态行时使用 `--lines all`。`--tail` 限制过滤后返回的末尾行数，`0` 表示全部；JSON 中 `output.count` 是控件总行数，`output.returnedCount` 是本次实际返回行数。`--dismiss-dialog=true` 会读取并自动确认 AutoShop 的连接状态类 `确定` 弹窗；`ui monitor` / `ui run` / `ui stop` 会优先处理这类弹窗，避免循环调用时堆积大量模态窗口。`ui download --yes` 会确认 AutoShop 的下载设置和下载过程提示，并返回 `confirmedDialogs`；如果遇到下载后是否运行 PLC 的提示，默认选择不运行，只有显式 `--run-after` 才会同意运行。`ui upload` 只触发并采集上载弹窗/输出，不自动确认可能改写当前 AutoShop 会话的上载流程。若需要人工保留弹窗可设为 `false`。
 
 `ui output` 单独读取下方“信息输出窗口”，`--pane compile` 读取“编译”，`communication` 读取“通讯”，`transfer` 读取“转换”，`search` 读取“查找结果”，`visible` 读取当前可见页，`all` 返回全部输出页。默认 `--lines errors` 适合自动化只取报错；完整输出使用 `--lines all --tail 0`。AutoShop 的输出 ListBox 是 owner-draw 控件，CLI 会从 item data 指针读取 AutoShop 进程内字符串并按工程文本编码解码；当前 `project001` 默认按 `gb2312` 处理。
 
