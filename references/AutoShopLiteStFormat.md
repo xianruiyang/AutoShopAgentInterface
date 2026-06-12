@@ -2,7 +2,7 @@
 
 ## 本地实测结论
 
-工程 `D:\program\PLC\project001` 中的 `MAIN.ST`、`INT_001.ST`、`SBR_001.ST` 不是纯文本文件，而是以 ASCII 签名 `AutoShop` 开头的二进制容器。
+工程 `<project-dir>` 中的 `MAIN.ST`、`INT_001.ST`、`SBR_001.ST` 不是纯文本文件，而是以 ASCII 签名 `AutoShop` 开头的二进制容器。
 
 可编辑的 ST 源码位于文件尾部附近，是一个 MFC 序列化风格的 `CString`：
 

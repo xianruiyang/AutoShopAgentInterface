@@ -2,14 +2,26 @@
 
 AutoShopAgentInterface is a Codex skill package and bundled CLI for operating Inovance AutoShop Lite ST projects from automation tools.
 
-This repository is the distributable skill package. It contains the packaged CLI, skill instructions, and reference documents. The development source lives in the separate `AutoShopAgentInterfaceDev` repository.
+This repository is the distributable skill package. It contains the packaged CLI, skill instructions, and reference documents. The development source lives in a separate repository and is not part of the installed skill.
+
+## Development Source
+
+Do not develop skill instructions or references from this distributable package or from the installed Codex skill directory. Update the development source first, then sync this package and the installed skill.
+
+Normal sync order:
+
+1. Update `AutoShopAgentInterfaceDev` source, `knowledge/`, metadata, and runtime records.
+2. Sync the distributable package in this repository.
+3. Sync the installed Codex skill.
+
+For the EtherCAT/IS620N template reference, sync the development-source knowledge file into this repository's `references\AutoShopEthercatSlaveTemplates.md`.
 
 ## Supported AutoShop Version
 
 Verified environment:
 
 - AutoShop: `V4.10.0.0`
-- CLI: `scripts/autoshop-agent.exe` `v0.8.125`
+- CLI: `scripts/autoshop-agent.exe` `v0.8.129`
 - OS: Windows
 - PLC family used for hardware validation: Inovance H5U
 
@@ -33,6 +45,7 @@ Main capabilities:
 - Apply workspace JSON/text changes back into the AutoShop project.
 - Read and write LiteST POU text through the workspace flow.
 - Inspect ST text, project metadata, variable tables, and supported configuration nodes.
+- Bind motion-axis output devices through workspace JSON, including EtherCAT CiA402 servo PDO mappings such as `motionAxis.axes[].parameters.outputDevice = "IS620N"`.
 - Drive selected AutoShop UI actions such as compile, download, upload, monitor, run, stop, screenshot, close project, and restore project.
 - Configure and test PLC communication through AutoShop's official communication settings dialog for supported hardware flows.
 
@@ -41,11 +54,11 @@ Main capabilities:
 For project content changes, use the workspace workflow:
 
 ```powershell
-.\scripts\autoshop-agent.exe ui close-project --project F:\program\PLC\001 --state F:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
-.\scripts\autoshop-agent.exe workspace export --project F:\program\PLC\001 --out F:\program\PLC\AutoShopAgentInterfaceWork\current-export --force --format json
-.\scripts\autoshop-agent.exe workspace apply --project F:\program\PLC\001 --in F:\program\PLC\AutoShopAgentInterfaceWork\current-export --dry-run --format json
-.\scripts\autoshop-agent.exe workspace apply --project F:\program\PLC\001 --in F:\program\PLC\AutoShopAgentInterfaceWork\current-export --format json
-.\scripts\autoshop-agent.exe ui restore-project --state F:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
+.\scripts\autoshop-agent.exe ui close-project --project <project-dir> --state <state-json> --format json
+.\scripts\autoshop-agent.exe workspace export --project <project-dir> --out <workspace-dir> --force --format json
+.\scripts\autoshop-agent.exe workspace apply --project <project-dir> --in <workspace-dir> --dry-run --format json
+.\scripts\autoshop-agent.exe workspace apply --project <project-dir> --in <workspace-dir> --format json
+.\scripts\autoshop-agent.exe ui restore-project --state <state-json> --format json
 ```
 
 If the target project is already open in AutoShop, close and restore it around `workspace apply`. Do not use `--allow-open-project` as a normal write path.
@@ -58,6 +71,8 @@ After `workspace apply`, check JSON results for:
 - `kind=project-package`
 
 Those fields indicate that the project file, project index, and package snapshot were written and read back successfully.
+
+Existing interrupt routine trigger settings are exported to `编程/程序块/_interrupt-triggers.json`. Edit `interrupts[].trigger`; `workspace apply` writes the AutoShop 4.10 `.hcp` interrupt `<POUID>` value, keeps `<Timer>0</Timer>`, verifies the readback, and syncs `.hcpp`. Use `trigger.type=raw` with `rawCode` for unknown or ambiguous AutoShop POUID encodings.
 
 ## Real PLC Boundary
 
@@ -109,7 +124,7 @@ Default configuration path:
 Create or update a config:
 
 ```powershell
-.\scripts\autoshop-agent.exe config init --project F:\program\PLC\001 --force
+.\scripts\autoshop-agent.exe config init --project <project-dir> --force
 ```
 
 The `autoShopExePath` field is currently reserved for launch support. Normal offline export/apply and UI refresh logic find the running AutoShop process instead of depending on that path.

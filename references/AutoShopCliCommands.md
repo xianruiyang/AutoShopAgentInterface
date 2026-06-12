@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.118`。
+适用版本：`autoshop-agent.exe v0.8.129`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -8,28 +8,28 @@
 
 ### 1.1 固定工程映射目录
 
-在 `D:\program\PLC` 当前工作区，固定使用：
+workspace 目录由调用方提供，示例使用：
 
 ```text
-D:\program\PLC\AutoShopAgentInterfaceWork\current-export
+<workspace-dir>
 ```
 
 临时验证目录只放在：
 
 ```text
-D:\program\PLC\AutoShopAgentInterfaceWork\archive
+<archive-dir>
 ```
 
-不要在 `D:\program\PLC` 根目录继续生成 `project001-*` 目录，也不要把 workspace、smoke、临时导出放进 `D:\program\PLC\AutoShopAgentInterface` skill 文件夹。
+不要把 workspace、smoke 工程或临时导出放进本 skill 文件夹。
 
 ### 1.2 导出、修改、预检查、应用
 
 ```powershell
-D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui close-project --project D:\program\PLC\project001 --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
-D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe workspace export --project D:\program\PLC\project001 --out D:\program\PLC\AutoShopAgentInterfaceWork\current-export --force
-D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\program\PLC\AutoShopAgentInterfaceWork\current-export --dry-run --format json
-D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe workspace apply --project D:\program\PLC\project001 --in D:\program\PLC\AutoShopAgentInterfaceWork\current-export --format json
-D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui restore-project --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
+.\scripts\autoshop-agent.exe ui close-project --project <project-dir> --state <state-json> --format json
+.\scripts\autoshop-agent.exe workspace export --project <project-dir> --out <workspace-dir> --force
+.\scripts\autoshop-agent.exe workspace apply --project <project-dir> --in <workspace-dir> --dry-run --format json
+.\scripts\autoshop-agent.exe workspace apply --project <project-dir> --in <workspace-dir> --format json
+.\scripts\autoshop-agent.exe ui restore-project --state <state-json> --format json
 ```
 
 如果目标工程当前已在 AutoShop 打开，常规编辑流程必须先用 `ui windows --format json` 确认主窗口 `title` 中的工程路径就是目标工程，再用 `ui close-project` 记录并关闭工程，完成正式 `workspace apply` 后再用 `ui restore-project` 恢复工程和窗口。若 AutoShop 未打开目标工程则跳过关闭/恢复；若打开的是其他工程，不要关闭。`--allow-open-project` 只作为用户明确要求跳过关闭/恢复流程时的例外，不作为默认写回路径。
@@ -43,8 +43,8 @@ D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui restore-proj
 工程级刷新拆成两步：
 
 ```powershell
-D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui close-project --project D:\program\PLC\project001 --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
-D:\program\PLC\AutoShopAgentInterface\scripts\autoshop-agent.exe ui restore-project --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json
+.\scripts\autoshop-agent.exe ui close-project --project <project-dir> --state <state-json> --format json
+.\scripts\autoshop-agent.exe ui restore-project --state <state-json> --format json
 ```
 
 `ui restore-project` 会优先在记录的同一个 AutoShop 进程中通过“打开工程”对话框恢复工程；只有原进程不存在时才退回到按工程文件启动 AutoShop。该流程默认通过指定窗口句柄发送 Win32 消息：`close-project` 通过 `WM_COMMAND` 关闭工程，`restore-project` 通过 `WM_COMMAND` 打开工程对话框、`WM_SETTEXT` 写入工程路径并确认；优先匹配菜单文本，AutoShop 使用自绘菜单导致 `GetMenu` 不可用时，会回退到从 AutoShop V4.10 资源确认的命令号 `32860`（关闭工程）和 `32859`（打开工程）。`ui close-project`、`ui restore-project`、`ui refresh-project`、`ui open`、`ui open-path`、`ui refresh`、`ui refresh-path`、`ui focus`、`ui close`、`ui tree`、`ui output`、`ui compile`、`ui compile-all`、`ui run`、`ui stop`、`ui download`、`ui upload`、`ui monitor` 和 `ui screenshot` 默认启用后台窗口保护：保存 `WINDOWPLACEMENT` 和操作前前台窗口，把 AutoShop 主窗口完全移动到当前虚拟屏幕右下角外侧执行，完成后恢复原窗口位置、最大化/最小化状态；如果 AutoShop 在过程中抢到前台，CLI 会先尝试把前台还给原用户窗口；若 Windows 前台限制导致恢复失败且 AutoShop 仍占前台，会把 AutoShop 最小化作为兜底，保证用户前台窗口不被 AutoShop 长时间打断。所有 UI 操作仍不使用全局键盘、全局鼠标或剪贴板。
@@ -89,6 +89,7 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | --- | --- | --- |
 | 编程/程序块 | `编程/程序块/*.st.txt` | 编辑既有程序块 ST 正文。 |
 | 编程/程序块 | `编程/程序块/*.pou.json` | 新增程序块、子程序或中断；`type=program|subprogram|interrupt`。 |
+| 编程/程序块 | `编程/程序块/_interrupt-triggers.json` | 编辑既有中断程序触发源；写回 AutoShop 4.10 `.hcp` 中断 `POUID`/`Timer=0` 并同步 `.hcpp`。 |
 | 编程/功能块(FB) | `编程/功能块(FB)/*.pou.json` | 新增 FB；`type=fb`，会创建 `.FB` 并注册 `FileType=81`、`ProgType=7`。 |
 | 编程/函数(FC) | `编程/函数(FC)/*.pou.json` | 新增 FC；`type=fc`，会创建 `.FC` 并注册 `FileType=82`、`ProgType=8`。 |
 | 全局变量/变量表 | `全局变量/变量表/变量表.gvt.json` | 编辑 `variables` 数组；不要手工改 `.gvt`。 |
@@ -126,6 +127,17 @@ Windows 保留设备名会使用安全目录名，例如 AutoShop 树里的 `配
 ```
 
 `workspace apply` 会创建对应 `.ST`、`.FB` 或 `.FC` 容器，维护 `folder.txt`，并同步 `.hcp` 工程索引和 `.hcpp` 工程包。`pou add` 是底层兼容/诊断入口，不是推荐新增流程。
+
+### 4.1.1 中断触发设置
+
+既有中断程序的触发源位于 `编程/程序块/_interrupt-triggers.json`，每个 `interrupts[]` 对应 `.hcp` 中一个 `ProgType=2` 的中断 POU。优先编辑 `trigger`：
+
+- `type=external`：`input` 为 `X0|X1|X2|X3`，`edge` 为 `falling|rising|both`。
+- `type=timed`：`channel` 为 `1..4`，`periodMs=1..1000`；AutoShop 4.10 样本编码为 `POUID=0x02CCPPPP`。
+- `type=comparison`：`compareIndex` 为 `1..16`。
+- `type=raw`：直接写 `rawCode` 或 `trigger.code`，用于未知或有歧义的 AutoShop 指针值。
+
+`workspace apply` 会重建加密 `.hcp` 中对应 `<POUID>`，同时保持 `<Timer>0</Timer>`，回读校验，并同步 `.hcpp` 工程包。AutoShop 4.10 实测外部中断编码为 `0x01II00EE`（`EE=01` 上升、`02` 下降、`03` 双沿），比较中断编码为 `0xNNFFFF`；旧 CLI 写入的 legacy `Timer` 码会在导出时迁移成 POUID。
 
 ### 4.2 全局变量表
 
@@ -287,6 +299,7 @@ AutoShop 常规页中的“写入站点别名”输入框当前不作为 workspa
 | --- | --- |
 | `virtualAxisMode` | 基本设置“虚轴模式”；按手动保存样本同步可见 UI 记录 `0x80000111` 和编译记录 `0x1900xx06`。 |
 | `autoMappingEnabled` | 基本设置“自动映射”。 |
+| `outputDevice` | 基本设置“输出设备”；写 `未分配` 可清除绑定，写 EtherCAT 从站名、`deviceVersion`、`productCode`、`key` 或 `index:N` 会按该从站已选 PDO 生成运动轴绑定 UI/编译记录，例如 `IS620N`。 |
 | `encoderMode` | `增量模式|绝对模式`。写回时同步可见 UI 记录、`encoderModeEffective` 和 `encoderModeLinkedFlag`。 |
 | `axisMotionMode` | `线性模式|旋转模式`。 |
 | `softwareLimitEnabled` | 软件限位使能。 |
@@ -450,7 +463,7 @@ Adapter 的 `outputDatasets[].dataType` 和 `inputDatasets[].dataType` 只能使
 
 `devices[].pages` 是完整字段索引和兜底编辑入口，不替代语义字段。每个字段包含 `value`、`originalValue`、`editable`、`source`、`recordKey`、`field`、`dataHex` 和推荐 `editPath`。apply 只有在 `value` 与 `originalValue` 不同，或显式写 `apply:true` 时才会写回该字段，因此导出 JSON 原样应用不会用页面旧值覆盖 `general`、`connections` 等语义编辑。`editable:false` 的字段表示该底层记录由更高层语义字段、实例规划或 AutoShop 运行态管理；例如 H5U 结构化连接块和数据集应编辑 `devices[].connections`、`devices[].tagConnections` 或 `devices[].ioMappings`，直接改对应 page 字段会被拒绝并返回推荐路径。`EIP_Card`、`Easy` 和其它单 primary connection 简单设备会导出 `standardConnection` 页，字段包括 `enabled`、`rpiMs`、O->T/T->O assembly、大小、`outputConnectionType`、`inputConnectionType`、`outputConnectionPriority`、`inputConnectionPriority`、`electronicKeying`；连接类型和优先级均使用与 H5U 相同的语义文本，apply 自动转回 primary record 编码。
 
-`deviceLibraryPath` 可指向模板库根目录或 `ethernet-ip/index.json` 所在目录；当前正式库在 `D:\program\PLC\AutoShopAgentInterfaceWork\device-library`。未显式配置时，CLI 会从当前工程目录和发布 exe 目录向上查找 `AutoShopAgentInterfaceWork\device-library`，因此常规工程可直接用最小 JSON 新增。`EIP_Card`、`Easy`、`H5U` 已有 `records + privateRecords` 模板，可用最小 JSON 新增并在 apply 后回读补全；`Generic_EtherNet_IP_device` 已作为 private-only 模板接入，可通过 `internalName` / `deviceName` / `toolboxName` 新增、删除和保真回读，但没有 primary device records，字段级编辑以 `privateRecords` 中已识别的值为准。
+`deviceLibraryPath` 可指向模板库根目录或 `ethernet-ip/index.json` 所在目录；当前正式库在 `<device-library-dir>`。未显式配置时，CLI 会从当前工程目录和发布 exe 目录向上查找 `AutoShopAgentInterfaceWork\device-library`，因此常规工程可直接用最小 JSON 新增。`EIP_Card`、`Easy`、`H5U` 已有 `records + privateRecords` 模板，可用最小 JSON 新增并在 apply 后回读补全；`Generic_EtherNet_IP_device` 已作为 private-only 模板接入，可通过 `internalName` / `deviceName` / `toolboxName` 新增、删除和保真回读，但没有 primary device records，字段级编辑以 `privateRecords` 中已识别的值为准。
 
 EtherNet/IP 设备导出会包含 `instance` 诊断视图，记录 AutoShop 已分配的 `primaryGroup`、`privateGroup`、`deviceIndex`、private `typeCode/treeCode/primaryLink` 和 `_IPn_*` 变量名。修改既有设备时，CLI 会保留这些实例状态，只同步用户显式修改的 IP、identity、RPI、I/O size、assembly instance、显示名等字段；不会按 JSON 数组下标重算 `deviceIndex`、private `typeCode/treeCode` 或变量名。新增设备时，CLI 会从当前工程模板或正式模板库克隆 `records/privateRecords`，再按缺失字段补齐实例状态；private-only 设备没有 primary records，未显式提供 `instance.typeCode` / `instance.treeCode` 时会按当前工程已规划的 primary/private 占用情况分配未占用值，避免和既有设备树节点冲突。正常使用时不建议手工改 `instance`、`records` 和 `privateRecords` 里的联动字段；若 JSON 中只填写 `internalName` / `deviceName` / `toolboxName` 和必要参数，`workspace apply` 后再 `workspace export` 会回读补全完整 `records`、`privateRecords` 与 `instance`。
 
@@ -509,10 +522,10 @@ H5U 普通连接、标签连接以及简单设备 `standardConnection` 的连接
   "key": "device_002_Easy",
   "templateKey": "device_001_H5U",
   "name": "Easy",
-  "ipAddress": "192.168.1.4",
+  "ipAddress": "<plc-ip>",
   "productCode": 269,
   "parameters": {
-    "ipAddress": "192.168.1.4",
+    "ipAddress": "<plc-ip>",
     "productCode": 269
   }
 }
@@ -524,7 +537,7 @@ H5U 普通连接、标签连接以及简单设备 `standardConnection` 的连接
 {
   "key": "device_002_Easy",
   "toolboxName": "Easy",
-  "ipAddress": "192.168.1.77",
+  "ipAddress": "<plc-ip>",
   "parameters": {
     "outputSizeBytes": 120,
     "inputSizeBytes": 124,
@@ -538,7 +551,7 @@ H5U 普通连接、标签连接以及简单设备 `standardConnection` 的连接
 ```json
 {
   "internalName": "H5U",
-  "ipAddress": "192.168.1.77",
+  "ipAddress": "<plc-ip>",
   "parameters": {
     "rpiMs": 50
   }
@@ -807,9 +820,9 @@ autoshop-agent.exe windows [--json]
 文件层编辑的最小验收顺序：
 
 1. `workspace apply --dry-run --format json`，确认没有格式错误、冲突或只读字段修改。
-2. 如果 `ui windows --format json` 显示 AutoShop 当前打开的就是目标工程，先执行 `ui close-project --project <dir> --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json`；若打开的是其他工程，不要关闭。
+2. 如果 `ui windows --format json` 显示 AutoShop 当前打开的就是目标工程，先执行 `ui close-project --project <dir> --state <state-json> --format json`；若打开的是其他工程，不要关闭。
 3. 正式 `workspace apply --format json`，检查每个变更项的 `verified=true`。
-4. 如第 2 步关闭过工程，执行 `ui restore-project --state D:\program\PLC\AutoShopAgentInterfaceWork\current-project-state.json --format json` 恢复工程和窗口。
+4. 如第 2 步关闭过工程，执行 `ui restore-project --state <state-json> --format json` 恢复工程和窗口。
 5. 重新 `workspace export --force` 到固定目录，读取 JSON 确认语义字段已回读为预期值。
 
 当前没有 PLC 真机后端。所有真机相关指令只能作为接口占位和离线测试入口使用。

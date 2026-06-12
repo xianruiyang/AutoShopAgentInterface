@@ -1,6 +1,6 @@
 interface:
   display_name: "AutoShop Agent Interface"
-  short_description: "通过随包 CLI 离线操作 AutoShop Lite ST 工程。"
-  default_prompt: "使用 $autoshop-agent-interface 检查、导出、写回或刷新 AutoShop Lite ST 工程；没有 PLC 真机时只使用离线命令。"
+  short_description: "通过随包 CLI 和拆分 reference 操作 AutoShop Lite ST / H5U 工程。"
+  default_prompt: "使用 $autoshop-agent-interface 检查、导出、写回或刷新 AutoShop Lite ST / H5U 工程；先按任务读取 AutoShopAgentWorkflow、WorkspaceJsonReference 或随包 H5U Markdown 手册；所有包内资源使用相对 skill 根路径；没有 PLC 真机时只使用离线命令。"
 policy:
   allow_implicit_invocation: false

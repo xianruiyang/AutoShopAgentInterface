@@ -2,10 +2,10 @@
 
 ## 默认离线测试
 
-源码仓库：
+Go 源码在单独的开发仓库中，不包含在发布 skill 包里。运行测试时切到开发仓库的 CLI 源码目录：
 
 ```text
-D:\program\PLC\AutoShopAgentInterfaceDev\src\autoshop-agent
+src\autoshop-agent
 ```
 
 运行：
@@ -44,7 +44,7 @@ go test ./...
 
 ```powershell
 $env:AUTOSHOP_AGENT_RUN_HARDWARE_TESTS = "1"
-$env:AUTOSHOP_AGENT_HARDWARE_CONFIG = "D:\path\hardware-config.json"
+$env:AUTOSHOP_AGENT_HARDWARE_CONFIG = "<hardware-config.json>"
 $env:AUTOSHOP_AGENT_HARDWARE_PROFILE = "bench"
 go test ./... -run Hardware -v
 ```

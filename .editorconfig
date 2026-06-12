@@ -1,0 +1,7 @@
+root = true
+
+[*.{md,txt,json,jsonc,yml,yaml,go,py,ps1,cmd,bat,st,fb,fc}]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = false
