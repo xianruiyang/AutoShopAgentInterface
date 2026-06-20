@@ -119,7 +119,7 @@ Known semantic fields include:
 - axis groups: `axisGroup.groups`
 - EtherCAT: `ethercat.parameters`, `ethercat.slaves`
 - EtherNet/IP: `ethernetIP`
-- CAN(CANLink): `canLink.portConfig`
+- CAN(CANLink): `canLink.portConfig`, `canLink.programConfig`
 
 ## H5U Modules
 
@@ -285,7 +285,19 @@ canLink.portConfig.parameters.baudRateKbps
 
 `stationSource` and `baudRateSource` are read-only in the current sampled H5U data.
 
-Right-click-created CAN configuration files such as `CANLink.data` and `CANLink.prg` are detected and preserved when present. Missing files are not generated from guesses.
+AutoShop 4.10 H5U CANLink3.0 samples can store station configuration in `CANLink.prg` without `CANLink.data`. When that file is present, export adds `canLink.programConfig`:
+
+```text
+canLink.programConfig.network.masterStationNumber
+canLink.programConfig.network.baudRateKbps
+canLink.programConfig.network.heartbeatMs
+canLink.programConfig.slaves[].statusRegister
+canLink.programConfig.slaves[].startStopElement
+```
+
+`programConfig` is parsed from KLC records in `CANLink.prg`; the tail checksum is `CRC16/MODBUS` stored big-endian. Unknown records stay in `programConfig.records[].dataHex`.
+
+Current semantic write support is deliberately narrow: edit only existing `slaves[].statusRegister` and `slaves[].startStopElement` values in the exported object. Add/delete station, station number edits, send mappings, receive mappings, sync mappings, and CANopen EDS/PDO/SDO/I/O Mapping still require real AutoShop samples before they can become semantic JSON.
 
 ## Fallback Fields
 
