@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.133`。
+适用版本：`autoshop-agent.exe v0.8.134`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -100,7 +100,7 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
 | 配置/轴组设置 | `配置/轴组设置/_node.config.json` | 优先改 `axisGroup.groups[].parameters`。 |
 | 配置/电子凸轮 | `配置/电子凸轮/_node.config.json` | 优先改 `electronicCam.cams`、`parameters.masterRange/slaveRange` 和已验证的 18 字节点表 `points`。 |
-| 配置/CAN(CANLink) | `配置/CAN(CANLink)/_node.config.json` | 优先改 `canLink.portConfig.parameters.protocol/stationNumber/baudRateKbps`；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前支持既有 IS/SV 从站 D/M、发送配置和接收许可表写回，`syncView` 为只读派生视图；协议为 `CANOpen` 时会附加只读 `canOpen.catalog`。 |
+| 配置/CAN(CANLink) | `配置/CAN(CANLink)/_node.config.json` | 优先改 `canLink.portConfig.parameters.protocol/stationNumber/baudRateKbps`；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前支持既有 IS/SV 从站站号/D/M、已采样发送配置和接收许可表写回，`syncView` 为只读派生视图；协议为 `CANOpen` 时会附加只读 `canOpen.catalog`。 |
 | 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`；新增从站优先写 AutoShop 工具箱叶子名称 `toolboxName`，`catalogKey` 仅用于高级诊断。 |
 | 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP.devices`、标签、连接和 I/O 数据集；新增设备可只写 `internalName` / `deviceName` / `toolboxName`，`catalogKey` 仅用于高级诊断。 |
 | 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
@@ -424,14 +424,14 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `canLink.programConfig.slaves[].type` / `typeCode` | 从站类型；当前已采样 `typeCode=5` 为 `IS/SV(伺服)`。 |
 | `canLink.programConfig.slaves[].statusRegister` | CANLink3.0 主窗口“状态码寄存器(D)”，例如 `D1001`。当前已支持对既有从站写回。 |
 | `canLink.programConfig.slaves[].startStopElement` | CANLink3.0 主窗口“从站启停元件(M)”，例如 `M1001`。当前已支持对既有从站写回。 |
-| `canLink.programConfig.sendConfigurations[]` | CANLink3.0 “发送配置”页条目。当前按真实样本支持既有条目修改：`time-ms`、`event-ms`、`event-m` 三类触发的站号、D/H 寄存器、功能码、寄存器数量、周期或触发 M。 |
-| `canLink.programConfig.receiveConfigurations[]` | CANLink3.0 “接收配置”许可表。当前支持修改既有条目的接收站和最多 8 个 `allowedSenderStations`。 |
+| `canLink.programConfig.sendConfigurations[]` | CANLink3.0 “发送配置”页条目。当前按真实样本支持 `time-ms`、`event-ms`、`event-m` 三类触发条目的新增、删除和修改；字段包括站号、D/H 寄存器、功能码、寄存器数量、周期或触发 M。 |
+| `canLink.programConfig.receiveConfigurations[]` | CANLink3.0 “接收配置”许可表。当前支持接收许可条目的新增、删除和修改，每条最多 8 个 `allowedSenderStations`。 |
 | `canLink.programConfig.syncView[]` | AutoShop “同步写”页的派生视图，底层来自 `sendConfigurations[]`；该字段只读，直接修改会被拒绝。实际同步写触发元件仍有未完全采样的 UI 约束。 |
 | `canLink.programConfig.records[]` | KLC record 原始视图，未知 record 保留 `dataHex`，不丢失不猜测。 |
 
 可直接改 `parameters`，也可在未改 `parameters` 时修改 `portConfig.protocol`、`portConfig.station.number`、`portConfig.baudRate.kbps` 这些嵌套字段。`workspace apply` 会写回 `PortConfig.cfg`，并同步 `.hcpp` 工程包成员快照。
 
-`programConfig` 写回只承诺当前已采样验证的既有从站 `stationNumber`、`statusRegister`/`startStopElement`、既有 `sendConfigurations[]` 条目和既有 `receiveConfigurations[]` 条目。既有从站改号时，CLI 会把原站号在已采样发送配置和接收许可表中的引用迁移到新站号。写回时 CLI 会在 `CANLink.prg` 内改对应字段、重算尾部 `CRC16/MODBUS`，并同步 `.hcpp`。如果 `programConfig.parseError` 存在且没有语义编辑，apply 保持 no-op；如果用户在不可解析样本上做语义编辑，会拒绝。
+`programConfig` 写回只承诺当前已采样验证的既有从站 `stationNumber`、`statusRegister`/`startStopElement`、`sendConfigurations[]` 中的 `time-ms`/`event-ms`/`event-m` 条目，以及 `receiveConfigurations[]` 接收许可条目。既有从站改号时，CLI 会把原站号在已采样发送配置和接收许可表中的引用迁移到新站号。发送/接收数组如果在 JSON 中出现，会按数组内容重建对应 KLC record；空数组表示删空该类配置，字段省略表示不修改。写回时 CLI 会在 `CANLink.prg` 内改对应字段、重算 record 长度和尾部 `CRC16/MODBUS`，并同步 `.hcpp`。如果 `programConfig.parseError` 存在且没有语义编辑，apply 保持 no-op；如果用户在不可解析样本上做语义编辑，会拒绝。
 
 示例：在导出的 JSON 中保留对应对象，只修改既有条目，不新建对象：
 
@@ -470,7 +470,7 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 }
 ```
 
-当前未完成的边界：CANLink3.0 从站新增/删除、发送/接收配置新增删除、真实同步写触发元件完整语义，都必须继续按真实 AutoShop 样本反解后再开放；不能用猜测 JSON 生成生产工程。
+当前未完成的边界：CANLink3.0 从站新增/删除、真实同步写触发元件完整语义，都必须继续按真实 AutoShop 样本反解后再开放；不能用猜测 JSON 生成生产工程。
 
 ### 4.10.1 CANopen catalog
 

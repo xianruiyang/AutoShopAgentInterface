@@ -3,7 +3,7 @@
 AutoShop Agent Interface packages a Codex skill and the `autoshop-agent.exe` CLI for operating Inovance AutoShop Lite/H5U projects through a JSON workspace workflow.
 
 - Supported AutoShop baseline: AutoShop V4.10.0.0.
-- Packaged CLI version: `0.8.133`.
+- Packaged CLI version: `0.8.134`.
 - License: MIT.
 
 ## Contents
@@ -35,7 +35,7 @@ After apply, check `verified=true`, `readBackSha256`, and any `.hcp/.hcpp` synch
 
 The workspace JSON flow supports editing ST/POU content, variables, structures, FB instances, interrupt triggers, H5U module configuration, EtherCAT, EtherNet/IP, motion axes, axis groups, electronic cams, and CAN configuration.
 
-For CAN(CANLink), `canLink.portConfig` edits the CAN root parameters. AutoShop 4.10 H5U `CANLink.prg` is exported as `canLink.programConfig`; current semantic writes support existing IS/SV slave `stationNumber`, `statusRegister`, `startStopElement`, existing send configurations, and existing receive allow-list entries. Changing an existing slave station number migrates sampled send/receive references from the old station to the new station and recalculates the `CANLink.prg` CRC.
+For CAN(CANLink), `canLink.portConfig` edits the CAN root parameters. AutoShop 4.10 H5U `CANLink.prg` is exported as `canLink.programConfig`; current semantic writes support existing IS/SV slave `stationNumber`, `statusRegister`, `startStopElement`, sampled send configuration add/edit/delete, and sampled receive allow-list add/edit/delete. Changing an existing slave station number migrates sampled send/receive references from the old station to the new station and recalculates the `CANLink.prg` CRC. Empty `sendConfigurations` or `receiveConfigurations` arrays intentionally delete that class; omitted arrays leave it unchanged.
 
 For CANopen, the CAN node is exported as `配置/CAN(CANopen)/_node.config.json` when the root protocol is CANOpen. The CLI exports a read-only `canOpen.catalog` from AutoShop EDS files and preserves raw `canopen.data` / `canopen.up` files when present. CANopen master/slave/PDO/SDO/I/O mapping semantic writes still require real AutoShop samples and are rejected when unsupported.
 
