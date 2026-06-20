@@ -120,6 +120,7 @@ Known semantic fields include:
 - EtherCAT: `ethercat.parameters`, `ethercat.slaves`
 - EtherNet/IP: `ethernetIP`
 - CAN(CANLink): `canLink.portConfig`, `canLink.programConfig`
+- CANopen: read-only `canOpen.catalog` when the CAN port protocol is `CANOpen`
 
 ## H5U Modules
 
@@ -293,11 +294,22 @@ canLink.programConfig.network.baudRateKbps
 canLink.programConfig.network.heartbeatMs
 canLink.programConfig.slaves[].statusRegister
 canLink.programConfig.slaves[].startStopElement
+canLink.programConfig.sendConfigurations[]
+canLink.programConfig.receiveConfigurations[]
+canLink.programConfig.syncView[]
 ```
 
 `programConfig` is parsed from KLC records in `CANLink.prg`; the tail checksum is `CRC16/MODBUS` stored big-endian. Unknown records stay in `programConfig.records[].dataHex`.
 
-Current semantic write support is deliberately narrow: edit only existing `slaves[].statusRegister` and `slaves[].startStopElement` values in the exported object. Add/delete station, station number edits, send mappings, receive mappings, sync mappings, and CANopen EDS/PDO/SDO/I/O Mapping still require real AutoShop samples before they can become semantic JSON.
+Current semantic write support is deliberately narrow: edit only existing `slaves[].statusRegister`, `slaves[].startStopElement`, existing `sendConfigurations[]`, and existing `receiveConfigurations[]` values in the exported object. `sendConfigurations[]` supports the sampled `time-ms`, `event-ms`, and `event-m` trigger modes without moving entries between records. `receiveConfigurations[]` supports the sampled receive allow-list entries. `syncView[]` is a read-only derived AutoShop view; edit the matching `sendConfigurations[]` entry instead. Add/delete station, station number edits, add/delete send or receive mappings, complete sync-trigger semantics, and CANopen EDS/PDO/SDO/I/O Mapping still require real AutoShop samples before they can become semantic JSON.
+
+When `canLink.portConfig.parameters.protocol` is `CANOpen`, export also adds:
+
+```text
+canOpen.catalog
+```
+
+`canOpen.catalog` is parsed from AutoShop `sys/eds` EDS files and exposes device identity, supported baud rates, RxPDO/TxPDO object summaries, and the object dictionary. It is a diagnostic/catalog surface only. Do not edit `canOpen.slaves`, PDO, SDO, or I/O mapping fields; current apply rejects direct `canOpen` slave edits and treats `canOpen.portConfig` as a read-only mirror. Edit CAN root protocol, station number, and baud rate through `canLink.portConfig.parameters`.
 
 ## Fallback Fields
 

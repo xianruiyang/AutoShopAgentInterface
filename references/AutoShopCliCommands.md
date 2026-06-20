@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.130`。
+适用版本：`autoshop-agent.exe v0.8.131`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -100,7 +100,7 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
 | 配置/轴组设置 | `配置/轴组设置/_node.config.json` | 优先改 `axisGroup.groups[].parameters`。 |
 | 配置/电子凸轮 | `配置/电子凸轮/_node.config.json` | 优先改 `electronicCam.cams`、`parameters.masterRange/slaveRange` 和已验证的 18 字节点表 `points`。 |
-| 配置/CAN(CANLink) | `配置/CAN(CANLink)/_node.config.json` | 优先改 `canLink.portConfig.parameters.protocol/stationNumber/baudRateKbps`；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前支持既有 IS/SV 从站 D/M 字段写回。 |
+| 配置/CAN(CANLink) | `配置/CAN(CANLink)/_node.config.json` | 优先改 `canLink.portConfig.parameters.protocol/stationNumber/baudRateKbps`；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前支持既有 IS/SV 从站 D/M、发送配置和接收许可表写回，`syncView` 为只读派生视图；协议为 `CANOpen` 时会附加只读 `canOpen.catalog`。 |
 | 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`；新增从站优先写 AutoShop 工具箱叶子名称 `toolboxName`，`catalogKey` 仅用于高级诊断。 |
 | 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP.devices`、标签、连接和 I/O 数据集；新增设备可只写 `internalName` / `deviceName` / `toolboxName`，`catalogKey` 仅用于高级诊断。 |
 | 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
@@ -416,7 +416,7 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `canLink.portConfig.parameters.baudRateKbps` | 通讯参数/波特率，单位 Kbps，支持 `20/50/100/125/250/500/800/1000`；底层 `0xD7` 起 `uint16le`。 |
 | `canLink.portConfig.parameters.stationSource` / `baudRateSource` | 当前样本显示为 `background`，但对应拨码控件在 H5U-A16 上禁用，导出只读；未采样到可写设备前写成其它值会被拒绝。 |
 | `canLink.rightClickConfig` | 记录右键“添加CAN配置”产生的 `CANLink.data`、`CANLink.prg` 是否存在。AutoShop 4.10 H5U 样本确认 `CANLink.prg` 可单文件存在，`CANLink.data` 缺失不代表配置不存在；缺失文件不会伪造。 |
-| `canLink.programConfig` | 从 `CANLink.prg` 解析出的 CANLink3.0 KLC record 视图，包含 header、CRC16/MODBUS 校验、网络记录、从站记录和原始 records。 |
+| `canLink.programConfig` | 从 `CANLink.prg` 解析出的 CANLink3.0 KLC record 视图，包含 header、CRC16/MODBUS 校验、网络记录、从站记录、发送配置、接收许可表、只读同步视图和原始 records。 |
 | `canLink.programConfig.network.masterStationNumber` | 主站号；当前样本 record 0 解析，正常与根口站号一致。 |
 | `canLink.programConfig.network.baudRateKbps` | CANLink3.0 网络波特率，当前样本 record 0 解析为 `500`。 |
 | `canLink.programConfig.network.heartbeatMs` | 网络心跳周期，当前样本 record 0 解析为 `500` ms。 |
@@ -424,13 +424,16 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `canLink.programConfig.slaves[].type` / `typeCode` | 从站类型；当前已采样 `typeCode=5` 为 `IS/SV(伺服)`。 |
 | `canLink.programConfig.slaves[].statusRegister` | CANLink3.0 主窗口“状态码寄存器(D)”，例如 `D1001`。当前已支持对既有从站写回。 |
 | `canLink.programConfig.slaves[].startStopElement` | CANLink3.0 主窗口“从站启停元件(M)”，例如 `M1001`。当前已支持对既有从站写回。 |
+| `canLink.programConfig.sendConfigurations[]` | CANLink3.0 “发送配置”页条目。当前按真实样本支持既有条目修改：`time-ms`、`event-ms`、`event-m` 三类触发的站号、D/H 寄存器、功能码、寄存器数量、周期或触发 M。 |
+| `canLink.programConfig.receiveConfigurations[]` | CANLink3.0 “接收配置”许可表。当前支持修改既有条目的接收站和最多 8 个 `allowedSenderStations`。 |
+| `canLink.programConfig.syncView[]` | AutoShop “同步写”页的派生视图，底层来自 `sendConfigurations[]`；该字段只读，直接修改会被拒绝。实际同步写触发元件仍有未完全采样的 UI 约束。 |
 | `canLink.programConfig.records[]` | KLC record 原始视图，未知 record 保留 `dataHex`，不丢失不猜测。 |
 
 可直接改 `parameters`，也可在未改 `parameters` 时修改 `portConfig.protocol`、`portConfig.station.number`、`portConfig.baudRate.kbps` 这些嵌套字段。`workspace apply` 会写回 `PortConfig.cfg`，并同步 `.hcpp` 工程包成员快照。
 
-`programConfig` 写回只承诺当前已用 AutoShop UI 回显验证的既有从站 `statusRegister` 和 `startStopElement`。写回时 CLI 会在 `CANLink.prg` 内改对应 D/M 字段、重算尾部 `CRC16/MODBUS`，并同步 `.hcpp`。如果 `programConfig.parseError` 存在且没有语义编辑，apply 保持 no-op；如果用户在不可解析样本上做语义编辑，会拒绝。
+`programConfig` 写回只承诺当前已采样验证的既有从站 `statusRegister`/`startStopElement`、既有 `sendConfigurations[]` 条目和既有 `receiveConfigurations[]` 条目。写回时 CLI 会在 `CANLink.prg` 内改对应字段、重算尾部 `CRC16/MODBUS`，并同步 `.hcpp`。如果 `programConfig.parseError` 存在且没有语义编辑，apply 保持 no-op；如果用户在不可解析样本上做语义编辑，会拒绝。
 
-示例：在导出的 JSON 中保留对应 `slaves[]` 对象，只修改 D/M 值，不新建对象：
+示例：在导出的 JSON 中保留对应对象，只修改既有条目，不新建对象：
 
 ```json
 {
@@ -442,13 +445,47 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
           "statusRegister": "D1002",
           "startStopElement": "M1003"
         }
+      ],
+      "sendConfigurations": [
+        {
+          "entryIndex": 0,
+          "triggerMode": "time-ms",
+          "senderStation": 1,
+          "senderRegister": "H200",
+          "receiverStation": 63,
+          "receiverRegister": "D120",
+          "registerCount": 1,
+          "intervalMs": 200
+        }
+      ],
+      "receiveConfigurations": [
+        {
+          "entryIndex": 0,
+          "receiverStation": 63,
+          "allowedSenderStations": [1]
+        }
       ]
     }
   }
 }
 ```
 
-当前未完成的 CANLink3.0 发送配置、接收配置、同步配置、从站新增/删除，以及 CANopen EDS/PDO/SDO/I/O Mapping 都必须继续按真实 AutoShop 样本反解后再开放；不能用猜测 JSON 生成生产工程。
+当前未完成的边界：CANLink3.0 从站新增/删除、发送/接收配置新增删除、站号迁移、真实同步写触发元件完整语义，都必须继续按真实 AutoShop 样本反解后再开放；不能用猜测 JSON 生成生产工程。
+
+### 4.10.1 CANopen catalog
+
+当 `canLink.portConfig.parameters.protocol` 为 `CANOpen` 时，同一个 `配置/CAN(CANLink)/_node.config.json` 会附加只读 `canOpen` 诊断对象。
+
+| 字段 | 含义 |
+| --- | --- |
+| `canOpen.portConfig` | `canLink.portConfig` 的只读镜像。需要修改协议、站号或波特率时，改 `canLink.portConfig.parameters`；只改 `canOpen.portConfig` 会被拒绝。 |
+| `canOpen.catalog.autoShopRoot` / `edsDirectory` | AutoShop 安装根和 `sys/eds` 目录，用于诊断 EDS 来源。 |
+| `canOpen.catalog.devices[]` | 从 AutoShop EDS 文件解析出的 CANopen 设备列表，包含 `vendorNumber/productNumber/revisionNumber/productName/sourceRelative`、支持波特率、RxPDO/TxPDO 数量和对象字典摘要。 |
+| `canOpen.catalog.devices[].rxPdos[]` / `txPdos[]` | EDS 中 `0x1600..0x17FF`、`0x1A00..0x1BFF` 的 PDO mapping 对象摘要。 |
+| `canOpen.catalog.devices[].objectDictionary[]` | EDS 里的对象字典条目，保留 `index/subIndex/objectType/dataType/accessType/defaultValue/pdoMapping` 等诊断字段。 |
+| `canOpen.jsonCreateSupported` | 当前固定为 `false`。无 AutoShop 保存过的 CANopen 主站/从站样本时，不允许从 EDS 直接生成真实工程配置。 |
+
+`canOpen.catalog` 只解决 EDS 目录可见性和对象字典核对，不代表 CANopen 主站、从站、PDO、SDO 或 I/O Mapping 已经能写回。当前 `workspace apply` 会明确拒绝直接添加 `canOpen.slaves`，也不会根据 catalog 伪造 `CANopen` 配置文件。后续必须先用 AutoShop 保存真实 CANopen 从站样本，再按文件差异开放主站参数、PDO、SDO 和 I/O Mapping 的语义 JSON。
 
 ### 4.11 EtherNet/IP
 
@@ -776,6 +813,7 @@ autoshop-agent.exe ui close --program MAIN [--format json]
 autoshop-agent.exe ui close --title H5U [--format json]
 autoshop-agent.exe ui open --program MAIN [--format json]
 autoshop-agent.exe ui open-path --path "系统变量表/_SYS_COM" [--title _SYS_COM] [--format json]
+autoshop-agent.exe ui open-path --path "配置/CAN(CANLink)/CANlink配置" --top-title "CANLink3.0" [--format json]
 autoshop-agent.exe ui focus --program MAIN [--format json]
 autoshop-agent.exe ui compile [--timeout-ms 15000] [--lines errors|all] [--tail 200] [--dismiss-dialog=true] [--format json]
 autoshop-agent.exe ui compile-all [--timeout-ms 15000] [--lines errors|all] [--tail 200] [--dismiss-dialog=true] [--format json]
@@ -792,12 +830,14 @@ autoshop-agent.exe ui screenshot --title 变量表 --out var-table.png [--offscr
 autoshop-agent.exe ui screenshot --hwnd 0x1234 --out window.png [--allow-minimized] [--format json]
 autoshop-agent.exe ui dev-audit-pages --pid <pid> --path "配置/EtherCAT/GR10_0808ETNE" --preset ethercat --out <dir> [--format json]
 autoshop-agent.exe ui dev-audit-pages --pid <pid> --path "配置/EtherCAT/GS20-ECT-8L" --pages "common=110,28;process=110,76;startup=110,126;slot=110,174;io=110,224;info=110,272;status=110,320" --out <dir> [--format json]
+autoshop-agent.exe ui dev-clicks --hwnd 0x1234 --clicks "row=45,42" [--double] [--post] [--format json]
+autoshop-agent.exe ui dev-key --hwnd 0x1234 --keys "down,enter" [--format json]
 autoshop-agent.exe ui dev-h5u-tag-connection --row <n> [--inspect-only] [--input-connection-type multicast|point-to-point] [--out <dir>] [--timeout-ms 15000] [--format json]
 ```
 
 后台窗口保护会用 `SM_XVIRTUALSCREEN/SM_YVIRTUALSCREEN/SM_CXVIRTUALSCREEN/SM_CYVIRTUALSCREEN` 读取当前虚拟屏幕边界，按右下角外侧计算临时位置，因此兼容不同分辨率、缩放布局和带负坐标的多显示器。`--offscreen-visible` 大于 0 时会在屏幕边缘保留对应像素用于诊断；默认 `0` 表示完全离屏。操作结束后使用启动前保存的 `WINDOWPLACEMENT` 恢复 AutoShop 的原恢复矩形；若原来是最小化，使用不激活窗口的最小化状态恢复，避免用户从任务栏重新打开时窗口留在屏幕外；如果 AutoShop 截图期间抢到前台，会同样使用最小化兜底保护用户前台窗口。
 
-`ui compile` 对应 AutoShop 的 `Ctrl+F7` 编译按钮，`ui compile-all` 对应 `F7` 全部编译，`ui run` 对应 `F5` 运行，`ui stop` 对应 `F6` 停止，`ui download` 对应 `F8` 下载，`ui upload` 对应 `F9` 上载，`ui monitor` 对应 `F3` 监控。它们在后台窗口保护内通过 AutoShop 主窗口句柄发送 `WM_COMMAND`，不会使用全局键盘、全局鼠标或剪贴板。JSON 返回包含 `commandId`、`shortcut`、`output`、`outputChanged` 和 `dialogs`；其中 `output` 来自下方“信息输出窗口”的 ListBox，`dialogs` 会采集本次命令新弹出的 AutoShop 模态提示文本和按钮。`--lines errors` 是默认值，只返回错误行；需要完整读取编译过程、时间戳和普通状态行时使用 `--lines all`。`--tail` 限制过滤后返回的末尾行数，`0` 表示全部；JSON 中 `output.count` 是控件总行数，`output.returnedCount` 是本次实际返回行数。`--dismiss-dialog=true` 会读取并自动确认 AutoShop 的连接状态类 `确定` 弹窗；`ui monitor` / `ui run` / `ui stop` 会优先处理这类弹窗，避免循环调用时堆积大量模态窗口。`ui download --yes` 会确认 AutoShop 的下载设置和下载过程提示，并返回 `confirmedDialogs`；如果遇到下载后是否运行 PLC 的提示，默认选择不运行，只有显式 `--run-after` 才会同意运行。`ui upload` 只触发并采集上载弹窗/输出，不自动确认可能改写当前 AutoShop 会话的上载流程。若需要人工保留弹窗可设为 `false`。
+`ui open-path --title` 用于打开工程树中的 MDI 子窗口；`ui open-path --top-title` 用于打开 CANLink、CANopen、H5U 参数等同进程顶层配置窗口，JSON 会返回该顶层窗口的 `handle`，后续可传给 `ui dev-inspect-window --hwnd` 或 `ui screenshot --hwnd` 采样。`ui compile` 对应 AutoShop 的 `Ctrl+F7` 编译按钮，`ui compile-all` 对应 `F7` 全部编译，`ui run` 对应 `F5` 运行，`ui stop` 对应 `F6` 停止，`ui download` 对应 `F8` 下载，`ui upload` 对应 `F9` 上载，`ui monitor` 对应 `F3` 监控。它们在后台窗口保护内通过 AutoShop 主窗口句柄发送 `WM_COMMAND`，不会使用全局键盘、全局鼠标或剪贴板。JSON 返回包含 `commandId`、`shortcut`、`output`、`outputChanged` 和 `dialogs`；其中 `output` 来自下方“信息输出窗口”的 ListBox，`dialogs` 会采集本次命令新弹出的 AutoShop 模态提示文本和按钮。`--lines errors` 是默认值，只返回错误行；需要完整读取编译过程、时间戳和普通状态行时使用 `--lines all`。`--tail` 限制过滤后返回的末尾行数，`0` 表示全部；JSON 中 `output.count` 是控件总行数，`output.returnedCount` 是本次实际返回行数。`--dismiss-dialog=true` 会读取并自动确认 AutoShop 的连接状态类 `确定` 弹窗；`ui monitor` / `ui run` / `ui stop` 会优先处理这类弹窗，避免循环调用时堆积大量模态窗口。`ui download --yes` 会确认 AutoShop 的下载设置和下载过程提示，并返回 `confirmedDialogs`；如果遇到下载后是否运行 PLC 的提示，默认选择不运行，只有显式 `--run-after` 才会同意运行。`ui upload` 只触发并采集上载弹窗/输出，不自动确认可能改写当前 AutoShop 会话的上载流程。若需要人工保留弹窗可设为 `false`。
 
 `ui output` 单独读取下方“信息输出窗口”，`--pane compile` 读取“编译”，`communication` 读取“通讯”，`transfer` 读取“转换”，`search` 读取“查找结果”，`visible` 读取当前可见页，`all` 返回全部输出页。默认 `--lines errors` 适合自动化只取报错；完整输出使用 `--lines all --tail 0`。AutoShop 的输出 ListBox 是 owner-draw 控件，CLI 会从 item data 指针读取 AutoShop 进程内字符串并按工程文本编码解码；当前 `project001` 默认按 `gb2312` 处理。
 
@@ -841,3 +881,6 @@ autoshop-agent.exe windows [--json]
 5. 重新 `workspace export --force` 到固定目录，读取 JSON 确认语义字段已回读为预期值。
 
 当前没有 PLC 真机后端。所有真机相关指令只能作为接口占位和离线测试入口使用。
+
+
+
