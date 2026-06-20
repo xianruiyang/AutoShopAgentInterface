@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.131`。
+适用版本：`autoshop-agent.exe v0.8.132`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -474,7 +474,7 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 ### 4.10.1 CANopen catalog
 
-当 `canLink.portConfig.parameters.protocol` 为 `CANOpen` 时，同一个 `配置/CAN(CANLink)/_node.config.json` 会附加只读 `canOpen` 诊断对象。
+当 `canLink.portConfig.parameters.protocol` 为 `CANOpen` 时，CAN 配置节点会按 AutoShop 工程树导出为 `配置/CAN(CANopen)/_node.config.json`，并附加只读 `canOpen` 诊断对象；CANLink 协议仍导出为 `配置/CAN(CANLink)/_node.config.json`。
 
 | 字段 | 含义 |
 | --- | --- |
@@ -486,6 +486,8 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `canOpen.jsonCreateSupported` | 当前固定为 `false`。无 AutoShop 保存过的 CANopen 主站/从站样本时，不允许从 EDS 直接生成真实工程配置。 |
 
 `canOpen.catalog` 只解决 EDS 目录可见性和对象字典核对，不代表 CANopen 主站、从站、PDO、SDO 或 I/O Mapping 已经能写回。当前 `workspace apply` 会明确拒绝直接添加 `canOpen.slaves`，也不会根据 catalog 伪造 `CANopen` 配置文件。后续必须先用 AutoShop 保存真实 CANopen 从站样本，再按文件差异开放主站参数、PDO、SDO 和 I/O Mapping 的语义 JSON。
+
+AutoShop 4.10 二进制字符串显示 CANopen 详细配置文件名为 `canopen.data`，在线/传输相关文件名包含 `canopen.up`。CLI 已将这两个文件注册到 CAN 配置节点；若工程中实际存在，`workspace export` 会把它们作为 `files[]` 原始成员导出，`workspace apply` 可按 `contentHex` / `contentBase64` 保真回写，但当前仍不解析其主站、从站、PDO、SDO 或 I/O Mapping 语义。
 
 ### 4.11 EtherNet/IP
 

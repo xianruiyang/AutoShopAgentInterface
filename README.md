@@ -21,7 +21,7 @@ For the EtherCAT/IS620N template reference, sync the development-source knowledg
 Verified environment:
 
 - AutoShop: `V4.10.0.0`
-- CLI: `scripts/autoshop-agent.exe` `v0.8.131`
+- CLI: `scripts/autoshop-agent.exe` `v0.8.132`
 - OS: Windows
 - PLC family used for hardware validation: Inovance H5U
 
@@ -47,7 +47,7 @@ Main capabilities:
 - Inspect ST text, project metadata, variable tables, and supported configuration nodes.
 - Bind motion-axis output devices through workspace JSON, including EtherCAT CiA402 servo PDO mappings such as `motionAxis.axes[].parameters.outputDevice = "IS620N"`.
 - Edit CAN(CANLink) root parameters and sampled CANLink3.0 `CANLink.prg` fields through `canLink.programConfig`, including existing IS/SV slave D/M fields, existing send configurations, and existing receive allow-list entries.
-- Export read-only CANopen EDS catalog data through `canOpen.catalog` when the CAN root protocol is `CANOpen`; CANopen slave/PDO/SDO/I/O Mapping writes still require real AutoShop samples and are rejected if attempted through `canOpen`.
+- Export CANopen projects under the dynamic `配置/CAN(CANopen)` workspace path, expose read-only CANopen EDS catalog data through `canOpen.catalog`, and preserve raw `canopen.data` / `canopen.up` files when AutoShop creates them; CANopen slave/PDO/SDO/I/O Mapping semantic writes still require real AutoShop samples and are rejected if attempted through `canOpen`.
 - Drive selected AutoShop UI actions such as compile, download, upload, monitor, run, stop, screenshot, close project, and restore project.
 - Configure and test PLC communication through AutoShop's official communication settings dialog for supported hardware flows.
 

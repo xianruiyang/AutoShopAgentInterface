@@ -1,6 +1,6 @@
 ---
 name: autoshop-agent-interface
-description: "当 Codex 需要通过随包 CLI 操作汇川 Inovance AutoShop Lite ST / H5U 工程时使用：导出/应用 workspace JSON，编辑 POU、变量、模块配置、EtherCAT、EtherNet/IP、运动轴、CAN(CANLink)，查看 CANopen EDS catalog，控制 AutoShop UI 编译/下载/上载/监控，或查询随包 H5U/AutoShop Markdown 手册。真实 PLC 操作必须显式使用 hardware/UI 命令；默认 target/online/monitor/comm/motion/build 后端是 simulator。"
+description: "当 Codex 需要通过随包 CLI 操作汇川 Inovance AutoShop Lite ST / H5U 工程时使用：导出/应用 workspace JSON，编辑 POU、变量、模块配置、EtherCAT、EtherNet/IP、运动轴、CAN(CANLink/CANopen)，查看 CANopen EDS catalog，控制 AutoShop UI 编译/下载/上载/监控，或查询随包 H5U/AutoShop Markdown 手册。真实 PLC 操作必须显式使用 hardware/UI 命令；默认 target/online/monitor/comm/motion/build 后端是 simulator。"
 ---
 
 # AutoShop Agent Interface

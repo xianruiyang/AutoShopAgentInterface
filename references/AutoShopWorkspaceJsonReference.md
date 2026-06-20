@@ -120,7 +120,7 @@ Known semantic fields include:
 - EtherCAT: `ethercat.parameters`, `ethercat.slaves`
 - EtherNet/IP: `ethernetIP`
 - CAN(CANLink): `canLink.portConfig`, `canLink.programConfig`
-- CANopen: read-only `canOpen.catalog` when the CAN port protocol is `CANOpen`
+- CANopen: dynamic `配置/CAN(CANopen)/_node.config.json`, read-only `canOpen.catalog`, and raw `canopen.data` / `canopen.up` preservation when those files exist
 
 ## H5U Modules
 
@@ -310,6 +310,8 @@ canOpen.catalog
 ```
 
 `canOpen.catalog` is parsed from AutoShop `sys/eds` EDS files and exposes device identity, supported baud rates, RxPDO/TxPDO object summaries, and the object dictionary. It is a diagnostic/catalog surface only. Do not edit `canOpen.slaves`, PDO, SDO, or I/O mapping fields; current apply rejects direct `canOpen` slave edits and treats `canOpen.portConfig` as a read-only mirror. Edit CAN root protocol, station number, and baud rate through `canLink.portConfig.parameters`.
+
+For CANopen projects, the CAN node mirrors AutoShop's UI path as `配置/CAN(CANopen)/_node.config.json`. AutoShop 4.10 binary strings identify `canopen.data` and `canopen.up` as CANopen detail/transfer files; if they exist in a project, workspace export includes them in the CAN node `files[]` array for byte-preserving apply. Their master/slave/PDO/SDO/I/O mapping structure is still not parsed without a real saved AutoShop sample.
 
 ## Fallback Fields
 
