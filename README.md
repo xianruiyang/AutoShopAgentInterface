@@ -1,146 +1,52 @@
-# AutoShopAgentInterface
+# AutoShop Agent Interface
 
-AutoShopAgentInterface is a Codex skill package and bundled CLI for operating Inovance AutoShop Lite ST projects from automation tools.
+AutoShop Agent Interface packages a Codex skill and the `autoshop-agent.exe` CLI for operating Inovance AutoShop Lite/H5U projects through a JSON workspace workflow.
 
-This repository is the distributable skill package. It contains the packaged CLI, skill instructions, and reference documents. The development source lives in a separate repository and is not part of the installed skill.
+- Supported AutoShop baseline: AutoShop V4.10.0.0.
+- Packaged CLI version: `0.8.133`.
+- License: MIT.
 
-## Development Source
+## Contents
 
-Do not develop skill instructions or references from this distributable package or from the installed Codex skill directory. Update the development source first, then sync this package and the installed skill.
-
-Normal sync order:
-
-1. Update `AutoShopAgentInterfaceDev` source, `knowledge/`, metadata, and runtime records.
-2. Sync the distributable package in this repository.
-3. Sync the installed Codex skill.
-
-For the EtherCAT/IS620N template reference, sync the development-source knowledge file into this repository's `references\AutoShopEthercatSlaveTemplates.md`.
-
-## Supported AutoShop Version
-
-Verified environment:
-
-- AutoShop: `V4.10.0.0`
-- CLI: `scripts/autoshop-agent.exe` `v0.8.132`
-- OS: Windows
-- PLC family used for hardware validation: Inovance H5U
-
-Known version boundary:
-
-- `V4.10.0.0` is the current supported target.
-- `V4.11.0.5` is not the supported baseline for this package. Local testing showed behavior differences around project editing and UI automation, so do not assume it is compatible without re-validation.
-- Other AutoShop versions may work for offline project parsing, but UI commands, command IDs, dialogs, and binary project formats must be validated before real use.
-
-## What This Package Does
-
-The CLI entrypoint is:
-
-```powershell
-.\scripts\autoshop-agent.exe
+```text
+scripts/autoshop-agent.exe
+SKILL.md
+references/
 ```
 
-Main capabilities:
+Use paths inside this package relative to the package root. Caller-specific values such as project directories, workspace export directories, PLC IPs, temporary folders, and device-library folders should be supplied as `<project-dir>`, `<workspace-dir>`, `<state-json>`, `<plc-ip>`, and `<device-library-dir>`.
 
-- Export an AutoShop project into an editable workspace mirror.
-- Apply workspace JSON/text changes back into the AutoShop project.
-- Read and write LiteST POU text through the workspace flow.
-- Inspect ST text, project metadata, variable tables, and supported configuration nodes.
-- Bind motion-axis output devices through workspace JSON, including EtherCAT CiA402 servo PDO mappings such as `motionAxis.axes[].parameters.outputDevice = "IS620N"`.
-- Edit CAN(CANLink) root parameters and sampled CANLink3.0 `CANLink.prg` fields through `canLink.programConfig`, including existing IS/SV slave D/M fields, existing send configurations, and existing receive allow-list entries.
-- Export CANopen projects under the dynamic `配置/CAN(CANopen)` workspace path, expose read-only CANopen EDS catalog data through `canOpen.catalog`, and preserve raw `canopen.data` / `canopen.up` files when AutoShop creates them; CANopen slave/PDO/SDO/I/O Mapping semantic writes still require real AutoShop samples and are rejected if attempted through `canOpen`.
-- Drive selected AutoShop UI actions such as compile, download, upload, monitor, run, stop, screenshot, close project, and restore project.
-- Configure and test PLC communication through AutoShop's official communication settings dialog for supported hardware flows.
+## Standard Workflow
 
-## Normal Editing Workflow
-
-For project content changes, use the workspace workflow:
+For normal project edits, export the workspace JSON, edit it, dry-run apply, then apply for real:
 
 ```powershell
+.\scripts\autoshop-agent.exe ui windows --format json
 .\scripts\autoshop-agent.exe ui close-project --project <project-dir> --state <state-json> --format json
-.\scripts\autoshop-agent.exe workspace export --project <project-dir> --out <workspace-dir> --force --format json
+.\scripts\autoshop-agent.exe workspace export --project <project-dir> --out <workspace-dir> --force
 .\scripts\autoshop-agent.exe workspace apply --project <project-dir> --in <workspace-dir> --dry-run --format json
 .\scripts\autoshop-agent.exe workspace apply --project <project-dir> --in <workspace-dir> --format json
 .\scripts\autoshop-agent.exe ui restore-project --state <state-json> --format json
 ```
 
-If the target project is already open in AutoShop, close and restore it around `workspace apply`. Do not use `--allow-open-project` as a normal write path.
+After apply, check `verified=true`, `readBackSha256`, and any `.hcp/.hcpp` synchronization entries in the JSON output. Use AutoShop UI commands such as `ui compile-all` when UI/project validity matters.
 
-After `workspace apply`, check JSON results for:
+## Current Scope
 
-- `verified=true`
-- `readBackSha256`
-- `kind=project-index`
-- `kind=project-package`
+The workspace JSON flow supports editing ST/POU content, variables, structures, FB instances, interrupt triggers, H5U module configuration, EtherCAT, EtherNet/IP, motion axes, axis groups, electronic cams, and CAN configuration.
 
-Those fields indicate that the project file, project index, and package snapshot were written and read back successfully.
+For CAN(CANLink), `canLink.portConfig` edits the CAN root parameters. AutoShop 4.10 H5U `CANLink.prg` is exported as `canLink.programConfig`; current semantic writes support existing IS/SV slave `stationNumber`, `statusRegister`, `startStopElement`, existing send configurations, and existing receive allow-list entries. Changing an existing slave station number migrates sampled send/receive references from the old station to the new station and recalculates the `CANLink.prg` CRC.
 
-Existing interrupt routine trigger settings are exported to `编程/程序块/_interrupt-triggers.json`. Edit `interrupts[].trigger`; `workspace apply` writes the AutoShop 4.10 `.hcp` interrupt `<POUID>` value, keeps `<Timer>0</Timer>`, verifies the readback, and syncs `.hcpp`. Use `trigger.type=raw` with `rawCode` for unknown or ambiguous AutoShop POUID encodings.
+For CANopen, the CAN node is exported as `配置/CAN(CANopen)/_node.config.json` when the root protocol is CANOpen. The CLI exports a read-only `canOpen.catalog` from AutoShop EDS files and preserves raw `canopen.data` / `canopen.up` files when present. CANopen master/slave/PDO/SDO/I/O mapping semantic writes still require real AutoShop samples and are rejected when unsupported.
 
-## Real PLC Boundary
+## Hardware Boundary
 
-Only the following command families intentionally use AutoShop hardware/UI paths:
-
-- `target transports --backend hardware`
-- `target scan --backend hardware`
-- `target connect --backend hardware`
-- `ui run`
-- `ui stop`
-- `ui download --yes`
-- `ui upload`
-- `ui monitor`
-
-Important notes:
-
-- `target scan/connect --backend hardware` drives AutoShop communication settings and can select communication type, set PLC IP, search, and test connection.
-- `ui download --yes` triggers AutoShop's real F8 download flow. It does not run the PLC after download unless `--run-after` is explicitly used.
-- `ui run` and `ui stop` map to AutoShop F5/F6 and control the connected PLC in the normal AutoShop online workflow.
-- `online`, `monitor`, `comm`, `motion`, `build compile/down/updown`, and most `target` commands are simulator/local placeholder commands unless explicitly documented otherwise.
-
-Do not treat simulator output as confirmation that a real PLC changed state.
-
-## UI Automation Notes
-
-AutoShop uses native Windows UI and modal dialogs. The CLI uses Win32 window messages and attempts to keep AutoShop offscreen or minimized when possible, but UI commands can still interact with the running AutoShop process.
-
-Before relying on UI automation:
-
-- Make sure the expected AutoShop version is installed.
-- Make sure the target project path in AutoShop matches the project being edited.
-- Prefer `--format json` and inspect returned dialogs and output panes.
-- For screenshots, check `nonBlank=true` and `uniqueProbe > 1`.
-
-## Encoding And Project Files
-
-Typical H5U/Easy LiteST project text uses `gb2312` project text encoding, while exported workspace text and JSON are intended for UTF-8 editing.
-
-Do not hand-edit AutoShop binary project files directly. Edit the workspace mirror and use `workspace apply`.
-
-## Configuration
-
-Default configuration path:
-
-```text
-%APPDATA%\AutoShopAgentInterface\config.json
-```
-
-Create or update a config:
-
-```powershell
-.\scripts\autoshop-agent.exe config init --project <project-dir> --force
-```
-
-The `autoShopExePath` field is currently reserved for launch support. Normal offline export/apply and UI refresh logic find the running AutoShop process instead of depending on that path.
+`target`, `online`, `monitor`, `comm`, `motion`, and legacy `build` commands are simulator/local unless the command explicitly uses `--backend hardware` or an AutoShop `ui ...` command. Real PLC download/upload/monitor operations should use the UI commands documented in `references/AutoShopAgentWorkflow.md` and `references/AutoShopCliCommands.md`.
 
 ## References
 
-More detailed command documentation is in:
-
-- `SKILL.md`
-- `references/AutoShopCliCommands.md`
-- `references/AutoShopLiteStFormat.md`
-- `references/AutoShopUiRefresh.md`
-- `references/AutoShopCliTesting.md`
-
-## License
-
-MIT. See `LICENSE`.
+- `references/AutoShopAgentWorkflow.md`: operational workflow and validation checklist.
+- `references/AutoShopCliCommands.md`: full command catalog and JSON edit surfaces.
+- `references/AutoShopWorkspaceJsonReference.md`: workspace JSON layout and editable fields.
+- `references/AutoShopH5uQuickReference.md` and bundled H5U manuals: H5U hardware and AutoShop references.
+- `references/AutoShopSkillPathPolicy.md`: package path and privacy policy.

@@ -292,6 +292,7 @@ AutoShop 4.10 H5U CANLink3.0 samples can store station configuration in `CANLink
 canLink.programConfig.network.masterStationNumber
 canLink.programConfig.network.baudRateKbps
 canLink.programConfig.network.heartbeatMs
+canLink.programConfig.slaves[].stationNumber
 canLink.programConfig.slaves[].statusRegister
 canLink.programConfig.slaves[].startStopElement
 canLink.programConfig.sendConfigurations[]
@@ -301,7 +302,7 @@ canLink.programConfig.syncView[]
 
 `programConfig` is parsed from KLC records in `CANLink.prg`; the tail checksum is `CRC16/MODBUS` stored big-endian. Unknown records stay in `programConfig.records[].dataHex`.
 
-Current semantic write support is deliberately narrow: edit only existing `slaves[].statusRegister`, `slaves[].startStopElement`, existing `sendConfigurations[]`, and existing `receiveConfigurations[]` values in the exported object. `sendConfigurations[]` supports the sampled `time-ms`, `event-ms`, and `event-m` trigger modes without moving entries between records. `receiveConfigurations[]` supports the sampled receive allow-list entries. `syncView[]` is a read-only derived AutoShop view; edit the matching `sendConfigurations[]` entry instead. Add/delete station, station number edits, add/delete send or receive mappings, complete sync-trigger semantics, and CANopen EDS/PDO/SDO/I/O Mapping still require real AutoShop samples before they can become semantic JSON.
+Current semantic write support is deliberately narrow: edit only existing `slaves[].stationNumber`, `slaves[].statusRegister`, `slaves[].startStopElement`, existing `sendConfigurations[]`, and existing `receiveConfigurations[]` values in the exported object. When an existing slave station number changes, sampled send/receive station references are migrated from the old station to the new station. `sendConfigurations[]` supports the sampled `time-ms`, `event-ms`, and `event-m` trigger modes without moving entries between records. `receiveConfigurations[]` supports the sampled receive allow-list entries. `syncView[]` is a read-only derived AutoShop view; edit the matching `sendConfigurations[]` entry instead. Add/delete station, add/delete send or receive mappings, complete sync-trigger semantics, and CANopen EDS/PDO/SDO/I/O Mapping still require real AutoShop samples before they can become semantic JSON.
 
 When `canLink.portConfig.parameters.protocol` is `CANOpen`, export also adds:
 
