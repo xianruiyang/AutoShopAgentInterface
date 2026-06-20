@@ -6,8 +6,8 @@
 - `.editorconfig`: Text-file encoding policy for this distributable package when opened directly; declares UTF-8 for Markdown, JSON, PowerShell, ST, and related text files.
 - `.vscode/settings.json`: VSCode workspace setting forcing `files.encoding=utf8` and disabling encoding auto-guessing when this package folder is opened directly.
 - `SKILL.md`: Codex skill instructions and operational rules for the bundled CLI.
-- `scripts/autoshop-agent.exe`: Packaged CLI binary, currently `v0.8.134`.
-- `references/`: Detailed command, format, UI refresh, testing, EtherCAT slave template references, motion-axis `outputDevice` JSON binding, CANLink `programConfig` editing including existing slave station-number migration and sampled send/receive add-edit-delete, dynamic CANopen workspace path, raw `canopen.data` / `canopen.up` preservation, and read-only CANopen EDS catalog export.
+- `scripts/autoshop-agent.exe`: Packaged CLI binary, currently `v0.8.135`.
+- `references/`: Detailed command, format, UI refresh, testing, EtherCAT slave template references, motion-axis `outputDevice` JSON binding, CANLink `programConfig` editing including existing slave station-number migration and sampled send/receive add-edit-delete, explicit CANLink `slaves` omission/add-delete boundary, dynamic CANopen workspace path, raw `canopen.data` / `canopen.up` preservation, and read-only CANopen EDS catalog export.
 - `references/AutoShopEthercatSlaveTemplates.md`: Reusable JSON template reference for EtherCAT `templateKey` clone, `toolboxName` device-library add, current verified `IS620N_ECAT_v2.6.8`, and `Axis_0` binding parameters.
 - `references/AutoShopSkillPathPolicy.md`: Path/privacy policy for packaged skill resources and placeholders.
 - `references/AutoShopH5uQuickReference.md`: H5U AutoShop quick reference for communication, modules, EtherCAT, EtherNet/IP, and CAN(CANLink).
@@ -17,3 +17,4 @@
 - `references/AutoShopH5uPlcInstructionManualCn.md`: Bundled Markdown conversion of the H5U PLC instruction manual.
 - `references/AutoShopH5uSeriesUserManualCn.md`: Bundled H5U series user manual Markdown.
 - `references/AutoShopH5uSeriesBrochureEn.md`: Bundled H5U brochure/spec overview Markdown.
+
