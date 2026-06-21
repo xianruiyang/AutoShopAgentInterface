@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.146`。
+适用版本：`autoshop-agent.exe v0.8.147`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -100,7 +100,7 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
 | 配置/轴组设置 | `配置/轴组设置/_node.config.json` | 优先改 `axisGroup.groups[].parameters`。 |
 | 配置/电子凸轮 | `配置/电子凸轮/_node.config.json` | 优先改 `electronicCam.cams`、`parameters.masterRange/slaveRange` 和已验证的 18 字节点表 `points`。 |
-| 配置/CAN(CANLink) | `配置/CAN(CANLink)/_node.config.json` | 优先改 `canLink.portConfig.parameters.protocol/stationNumber/baudRateKbps`；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前支持既有 IS/SV 从站站号/D/M、已采样发送配置和接收许可表写回，`syncView` 为只读派生视图；协议为 `CANOpen` 时会附加只读 `canOpen.catalog`。 |
+| 配置/CAN(CANLink) | `配置/CAN(CANLink)/_node.config.json` | 优先改 `canLink.portConfig.parameters.protocol/stationNumber/baudRateKbps`；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前支持既有 IS/SV 从站站号/D/M、已采样发送配置和接收许可表写回，`syncView` 为只读派生视图；协议为 `CANOpen` 时会附加 `canOpen.catalog` 和可窄范围写回的 `canOpen.dataConfig`。 |
 | 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`；新增从站优先写 AutoShop 工具箱叶子名称 `toolboxName`，`catalogKey` 仅用于高级诊断。 |
 | 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP.devices`、标签、连接和 I/O 数据集；新增设备可只写 `internalName` / `deviceName` / `toolboxName`，`catalogKey` 仅用于高级诊断。 |
 | 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
@@ -483,20 +483,21 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `canOpen.catalog.devices[]` | 从 AutoShop EDS 文件解析出的 CANopen 设备列表，包含 `vendorNumber/productNumber/revisionNumber/productName/sourceRelative`、支持波特率、RxPDO/TxPDO 数量和对象字典摘要。 |
 | `canOpen.catalog.devices[].rxPdos[]` / `txPdos[]` | EDS 中 `0x1600..0x17FF`、`0x1A00..0x1BFF` 的 PDO mapping 对象摘要。 |
 | `canOpen.catalog.devices[].objectDictionary[]` | EDS 里的对象字典条目，保留 `index/subIndex/objectType/dataType/accessType/defaultValue/pdoMapping` 等诊断字段。 |
-| `canOpen.dataConfig` | 当工程存在 `canopen.data` 时导出。解析 `NOC` header、CRC16/MODBUS、节点列表、对象表、EDS identity 匹配、从站 General 摘要、RxPDO/TxPDO 摘要、服务数据对象页 `sdoInit[]` alias、I/O 映射寄存器分配和 raw records。 |
+| `canOpen.dataConfig` | 当工程存在 `canopen.data` 时导出。解析 `NOC` header、CRC16/MODBUS、节点列表、主站 record0 network 字段、对象表、EDS identity 匹配、从站 General 摘要、RxPDO/TxPDO 摘要、服务数据对象页 `sdoInit[]` alias、I/O 映射寄存器分配和 raw records。 |
+| `canOpen.dataConfig.network` | 从 `canopen.data` record 0 回读的主站/网络字段。已验证可写 `producerHeartbeatTimeMs`、`sdoTimeoutMs`、`slaveReceiveMappingStartRegister`、`slaveTransmitMappingStartRegister`、`nodeStateMonitorStartRegister`；`recordMasterNodeId`、`recordBaudRateCode`、`record0TailHex`、`sourceRecordId`、`sourceRecordHex` 只读。根口站号和波特率仍通过 `canLink.portConfig.parameters.stationNumber/baudRateKbps` 写回。 |
 | `canOpen.dataConfig.slaves[]` | 从真实 `canopen.data` 回读的节点，包含 `nodeId`、匹配到的 EDS `sourceRelative/catalogKey`、identity、`general`、`rxPdos[]`、`txPdos[]`、`sdoInit[]` 和 `ioMappings[]` alias。既有 General 生产心跳时间、PDO 摘要、服务数据对象页行值和 I/O Mapping D 起始地址可写，写回会同步到底层 objectTable 或 record 5。 |
 | `canOpen.dataConfig.slaves[].general` | 从 AutoShop 从站节点页/专家设置页可见字段和 `canopen.data` objectTable/record 3 派生的 General 摘要。当前仅 `producerHeartbeatTimeMs` 可写，它是 `0x1017:0` 心跳生产时间的语义 alias；`syncCobId`、`syncCyclePeriodUs`、consumer heartbeat、record 3 raw 镜像和 SDO 相关字段只读。 |
 | `canOpen.dataConfig.slaves[].sdoInit[]` | 从 AutoShop 从站设置页 `服务数据对象` 采样出的既有行，底层与 `objectTable[]` 指向同一 record 2 条目。既有行可修改 `valueUnsigned`、`dataHex` 或 `rawValueHex`；新增/删除行和下载列标记仍拒绝。 |
 | `canOpen.dataConfig.ioMappings[]` | 从 `canopen.data` record 5 解析，并用 AutoShop 从站设置页 `I/O映射` 表校准；包含 `direction`、PDO `number`、`mappingIndex`、`variableRange`、D 起止寄存器、字节/字/位长度和 source offset。既有条目只允许修改 D 起始地址，即 `startRegister`、匹配固定长度的 `variableRange` 或 `endRegister`；方向、PDO 编号、映射索引、长度、source offset 和新增/删除都会被拒绝。 |
 | `canOpen.dataConfig.objectTable[]` | `canopen.data` record 2 的 14 字节对象条目展开，保留 `index/subIndex/byteLength/dataHex/rawValueHex/valueUnsigned/sourceRecordOffset`；既有条目的 `valueUnsigned`、`dataHex`、`rawValueHex` 可写。 |
-| `canOpen.dataConfig.records[]` | `canopen.data` 的顶层 `E3/E4` record raw 摘要；record 5 已有 `ioMappings[]` 语义视图，其余仍用于后续主站、SDO 和 I/O Mapping 写回采样校准。 |
-| `canOpen.jsonCreateSupported` / `canOpen.dataConfig.jsonWriteSupported` | `jsonCreateSupported=false`；存在 `canopen.data` 时 `dataConfig.jsonWriteSupported=true`，允许修改既有 objectTable 值、`slaves[].general.producerHeartbeatTimeMs`、既有 RxPDO/TxPDO 摘要、既有 `sdoInit[]` 行值，或既有 I/O Mapping D 起始地址并重算 CRC。`semanticWriteSupport` 会列出顶层和从站 alias 的 I/O Mapping D 起始地址入口。仍不允许从 EDS 或 JSON 直接生成/新增真实 CANopen 从站、PDO、SDO 行、I/O Mapping。 |
+| `canOpen.dataConfig.records[]` | `canopen.data` 的顶层 `E3/E4` record raw 摘要；record 0 已有 `network` 语义视图，record 5 已有 `ioMappings[]` 语义视图，其余仍用于后续 SDO 和 I/O Mapping 写回采样校准。 |
+| `canOpen.jsonCreateSupported` / `canOpen.dataConfig.jsonWriteSupported` | `jsonCreateSupported=false`；存在 `canopen.data` 时 `dataConfig.jsonWriteSupported=true`，允许修改 `network` 中已采样主站字段、既有 objectTable 值、`slaves[].general.producerHeartbeatTimeMs`、既有 RxPDO/TxPDO 摘要、既有 `sdoInit[]` 行值，或既有 I/O Mapping D 起始地址并重算 CRC。`semanticWriteSupport` 会列出主站 record0、顶层和从站 alias 的可写入口。仍不允许从 EDS 或 JSON 直接生成/新增真实 CANopen 从站、PDO、SDO 行、I/O Mapping。 |
 
-`canOpen.catalog` 只解决 EDS 目录可见性和对象字典核对，不是生成入口。`canOpen.dataConfig.objectTable[]` 已支持既有对象值窄范围写回；例如 `0x1017:0` 心跳生产时间会同步 record 2 对象表、record 3 运行镜像和启用标志，并重算 CRC。`canOpen.dataConfig.slaves[].general.producerHeartbeatTimeMs` 是同一字段的从站 General 页 alias，已用 `[1]IS620_V056` 样本验证 export/edit/apply/re-export。`canOpen.dataConfig.slaves[].rxPdos[]` / `txPdos[]` 是 objectTable 的 PDO 语义视图，可修改既有 PDO 的 `enabled`、`cobId`、`transmissionType`、`eventTimeMs` 和现有映射对象值；PDO 数量或映射数量变化会被拒绝。`canOpen.dataConfig.slaves[].sdoInit[]` 是 AutoShop `服务数据对象` 页的既有行 alias，可修改既有行 `valueUnsigned`、`dataHex` 或 `rawValueHex`，并同步到底层 objectTable；行数变化和下载列标记变化会被拒绝。`canOpen.dataConfig.ioMappings[]` 和 `slaves[].ioMappings[]` 指向同一 record 5 映射，已在 `[1]IS620_V056` 样本上验证把 `D7000` 改为 `D7010` 后 re-export 回读 `D7010...D7013`、从站 alias 同步、CRC 有效；如果顶层和从站 alias 对同一映射写入不同 D 起始地址会被拒绝。当前 `workspace apply` 仍会拒绝直接添加 `canOpen.slaves`，也不会根据 catalog 伪造 `CANopen` 配置文件。
+`canOpen.catalog` 只解决 EDS 目录可见性和对象字典核对，不是生成入口。`canOpen.dataConfig.network` 已支持主站 record0 中已采样字段窄范围写回；例如可把心跳生产时间、SDO 超时、从站接收/发送自动映射 D 起始和站点监控 D 起始写入 record0 并重算 CRC，已用 `[1]IS620_V056` 样本验证 export/edit/apply/re-export 和 AutoShop 主站设置页直接读回。`canOpen.dataConfig.objectTable[]` 已支持既有对象值窄范围写回；例如 `0x1017:0` 心跳生产时间会同步 record 2 对象表、record 3 运行镜像和启用标志，并重算 CRC。`canOpen.dataConfig.slaves[].general.producerHeartbeatTimeMs` 是同一字段的从站 General 页 alias，已用 `[1]IS620_V056` 样本验证 export/edit/apply/re-export。`canOpen.dataConfig.slaves[].rxPdos[]` / `txPdos[]` 是 objectTable 的 PDO 语义视图，可修改既有 PDO 的 `enabled`、`cobId`、`transmissionType`、`eventTimeMs` 和现有映射对象值；PDO 数量或映射数量变化会被拒绝。`canOpen.dataConfig.slaves[].sdoInit[]` 是 AutoShop `服务数据对象` 页的既有行 alias，可修改既有行 `valueUnsigned`、`dataHex` 或 `rawValueHex`，并同步到底层 objectTable；行数变化和下载列标记变化会被拒绝。`canOpen.dataConfig.ioMappings[]` 和 `slaves[].ioMappings[]` 指向同一 record 5 映射，已在 `[1]IS620_V056` 样本上验证把 `D7000` 改为 `D7010` 后 re-export 回读 `D7010...D7013`、从站 alias 同步、CRC 有效；如果顶层和从站 alias 对同一映射写入不同 D 起始地址会被拒绝。当前 `workspace apply` 仍会拒绝直接添加 `canOpen.slaves`，也不会根据 catalog 伪造 `CANopen` 配置文件。
 
 CANopen 数值/布尔可写字段按 JSON 字段存在性判断是否编辑：删除 `valueUnsigned`、`enabled`、`transmissionType`、`eventTimeMs` 等字段表示“不修改该值”；显式写 `0` 或 `false` 才会应用为 0/false。`dataHex` 和 `rawValueHex` 仍优先作为精确字节编辑入口。
 
-AutoShop 4.10 保存从站后会生成 `canopen.data`；当前样本确认其为 `NOC` header + `E3/E4` records + 大端 `CRC16/MODBUS` 尾校验。CLI 已将 `canopen.data` / `canopen.up` 注册到 CAN 配置节点；若工程中实际存在，`workspace export` 会把它们作为 `files[]` 原始成员导出，`workspace apply` 可按 `contentHex` / `contentBase64` 保真回写。未采样的主站深层参数、非空 SDO 初始化、I/O Mapping 新增删除、General 其它字段与 PDO 新增删除仍不能手写生成；已采样验证的既有 objectTable 值、General 生产心跳 alias、既有 PDO 摘要字段和既有 I/O Mapping D 起始地址可通过 `canOpen.dataConfig` 修改。
+AutoShop 4.10 保存从站后会生成 `canopen.data`；当前样本确认其为 `NOC` header + `E3/E4` records + 大端 `CRC16/MODBUS` 尾校验。CLI 已将 `canopen.data` / `canopen.up` 注册到 CAN 配置节点；若工程中实际存在，`workspace export` 会把它们作为 `files[]` 原始成员导出，`workspace apply` 可按 `contentHex` / `contentBase64` 保真回写。未采样的主站 record0 余留字节、非空 SDO 初始化新增删除、I/O Mapping 新增删除、General 其它字段与 PDO 新增删除仍不能手写生成；已采样验证的主站 record0 字段、既有 objectTable 值、General 生产心跳 alias、既有 PDO 摘要字段和既有 I/O Mapping D 起始地址可通过 `canOpen.dataConfig` 修改。
 
 ### 4.11 EtherNet/IP
 
