@@ -120,7 +120,7 @@ Known semantic fields include:
 - EtherCAT: `ethercat.parameters`, `ethercat.slaves`
 - EtherNet/IP: `ethernetIP`
 - CAN(CANLink): `canLink.portConfig`, `canLink.programConfig`
-- CANopen: dynamic `配置/CAN(CANopen)/_node.config.json`, read-only `canOpen.catalog`, read-only `canOpen.dataConfig` parsed from `canopen.data`, and raw `canopen.data` / `canopen.up` preservation when those files exist
+- CANopen: dynamic `配置/CAN(CANopen)/_node.config.json`, read-only `canOpen.catalog`, writable existing `canOpen.dataConfig.objectTable[]` values and existing `rxPdos[]`/`txPdos[]` summary values parsed from `canopen.data`, read-only calibrated `canOpen.dataConfig.ioMappings[]`, plus raw `canopen.data` / `canopen.up` preservation when those files exist
 
 ## H5U Modules
 
@@ -311,9 +311,9 @@ canOpen.catalog
 canOpen.dataConfig
 ```
 
-`canOpen.catalog` is parsed from AutoShop `sys/eds` EDS files and exposes device identity, supported baud rates, RxPDO/TxPDO object summaries, and the object dictionary. It is a diagnostic/catalog surface only. Do not edit `canOpen.slaves`, PDO, SDO, or I/O mapping fields; current apply rejects direct `canOpen` slave edits and treats `canOpen.portConfig` as a read-only mirror. Edit CAN root protocol, station number, and baud rate through `canLink.portConfig.parameters`.
+`canOpen.catalog` is parsed from AutoShop `sys/eds` EDS files and exposes device identity, supported baud rates, RxPDO/TxPDO object summaries, and the object dictionary. It is a diagnostic/catalog surface only. Do not edit `canOpen.slaves`, PDO, SDO, or I/O mapping fields; current apply rejects direct `canOpen` slave edits and treats `canOpen.portConfig` as a read-only mirror. Edit CAN root protocol, station number, and baud rate through `canLink.portConfig.parameters`; an unchanged exported `canOpen.portConfig` mirror does not block those canonical edits.
 
-For CANopen projects, the CAN node mirrors AutoShop's UI path as `配置/CAN(CANopen)/_node.config.json`. AutoShop 4.10 stores saved CANopen detail data in `canopen.data`, with `NOC` header, `E3/E4` records, and a big-endian CRC16/MODBUS tail. When `canopen.data` exists, export adds `canOpen.dataConfig` with header/checksum, node IDs, matched EDS device identity, object table, derived RxPDO/TxPDO mapping summaries, and raw records. Existing `canOpen.dataConfig.objectTable[]` values may be edited through `valueUnsigned`, `dataHex`, or `rawValueHex`; apply preserves object identity and length, rebuilds CRC, and syncs known mirrors such as `0x1017:0` heartbeat producer time into record 3. `canopen.data` / `canopen.up` still remain in the CAN node `files[]` array for byte-preserving apply. Direct semantic writes for CANopen slave add/delete, SDO initialization, I/O Mapping, and PDO property pages remain disabled until those AutoShop setting pages are sampled and verified.
+For CANopen projects, the CAN node mirrors AutoShop UI path as `配置/CAN(CANopen)/_node.config.json`. AutoShop 4.10 stores saved CANopen detail data in `canopen.data`, with `NOC` header, `E3/E4` records, and a big-endian CRC16/MODBUS tail. When `canopen.data` exists, export adds `canOpen.dataConfig` with header/checksum, node IDs, matched EDS device identity, object table, derived RxPDO/TxPDO mapping summaries, calibrated read-only I/O mapping register assignments, and raw records. Existing `canOpen.dataConfig.objectTable[]` values may be edited through `valueUnsigned`, `dataHex`, or `rawValueHex`; apply preserves object identity and length, rebuilds CRC, and syncs known mirrors such as `0x1017:0` heartbeat producer time into record 3. Existing `canOpen.dataConfig.slaves[].rxPdos[]` and `txPdos[]` may edit `enabled`, `cobId`, `transmissionType`, `eventTimeMs`, and existing `mappedObjects[]` values; apply synchronizes those summaries back into the matching objectTable entries and rejects PDO or mapped-object count changes. `canOpen.dataConfig.ioMappings[]` is parsed from record 5 and calibrated against AutoShop's `I/O映射` page; it reports `direction`, PDO `number`, `mappingIndex`, `variableRange`, D start/end registers, byte/word/bit length, and source offsets, but direct edits are rejected. `canopen.data` / `canopen.up` still remain in the CAN node `files[]` array for byte-preserving apply. Direct semantic writes for CANopen slave add/delete, SDO initialization, I/O Mapping writeback, and PDO add/delete/property pages remain disabled until those AutoShop setting pages are sampled and verified.
 
 ## Fallback Fields
 
@@ -324,5 +324,4 @@ When a semantic field does not exist, use:
 - page fields with `editable=true`
 
 Keep raw edits narrow and validate with `workspace apply --dry-run`, readback SHA, and AutoShop UI when visibility matters.
-
 

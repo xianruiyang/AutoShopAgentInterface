@@ -65,7 +65,7 @@ Use UI commands for AutoShop actions that must go through the official applicati
 
 `ui upload` triggers upload and collects output/dialog evidence; it does not automatically confirm an upload flow that could rewrite the current AutoShop session.
 
-Use `ui screenshot` for visual verification. Check screenshot JSON for `nonBlank=true` and `uniqueProbe > 1`.
+Use `ui screenshot` for visual verification. Check screenshot JSON for a healthy `contentRatio` and no blank-capture warning; `nonBlank=true` and `uniqueProbe > 1` are only auxiliary probes because title bars can make a blank client area look non-empty.
 
 ## Real Hardware Boundary
 

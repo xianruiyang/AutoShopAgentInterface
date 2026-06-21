@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.137`。
+适用版本：`autoshop-agent.exe v0.8.140`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -478,20 +478,21 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 | 字段 | 含义 |
 | --- | --- |
-| `canOpen.portConfig` | `canLink.portConfig` 的只读镜像。需要修改协议、站号或波特率时，改 `canLink.portConfig.parameters`；只改 `canOpen.portConfig` 会被拒绝。 |
+| `canOpen.portConfig` | `canLink.portConfig` 的只读镜像。需要修改协议、站号或波特率时，改 `canLink.portConfig.parameters`；只改 `canOpen.portConfig` 会被拒绝。导出 JSON 中未改动的旧镜像不会阻止 `canLink.portConfig.parameters` 的合法写回。 |
 | `canOpen.catalog.autoShopRoot` / `edsDirectory` | AutoShop 安装根和 `sys/eds` 目录，用于诊断 EDS 来源。 |
 | `canOpen.catalog.devices[]` | 从 AutoShop EDS 文件解析出的 CANopen 设备列表，包含 `vendorNumber/productNumber/revisionNumber/productName/sourceRelative`、支持波特率、RxPDO/TxPDO 数量和对象字典摘要。 |
 | `canOpen.catalog.devices[].rxPdos[]` / `txPdos[]` | EDS 中 `0x1600..0x17FF`、`0x1A00..0x1BFF` 的 PDO mapping 对象摘要。 |
 | `canOpen.catalog.devices[].objectDictionary[]` | EDS 里的对象字典条目，保留 `index/subIndex/objectType/dataType/accessType/defaultValue/pdoMapping` 等诊断字段。 |
-| `canOpen.dataConfig` | 当工程存在 `canopen.data` 时导出。解析 `NOC` header、CRC16/MODBUS、节点列表、对象表、EDS identity 匹配、RxPDO/TxPDO 摘要和 raw records。 |
-| `canOpen.dataConfig.slaves[]` | 从真实 `canopen.data` 回读的节点，包含 `nodeId`、匹配到的 EDS `sourceRelative/catalogKey`、`vendorNumber/productNumber/revisionNumber`、`rxPdos[]` 和 `txPdos[]`。 |
+| `canOpen.dataConfig` | 当工程存在 `canopen.data` 时导出。解析 `NOC` header、CRC16/MODBUS、节点列表、对象表、EDS identity 匹配、RxPDO/TxPDO 摘要、I/O 映射寄存器分配和 raw records。 |
+| `canOpen.dataConfig.slaves[]` | 从真实 `canopen.data` 回读的节点，包含 `nodeId`、匹配到的 EDS `sourceRelative/catalogKey`、identity、`rxPdos[]`、`txPdos[]` 和只读 `ioMappings[]`。既有 PDO 摘要可改 `enabled`、`cobId`、`transmissionType`、`eventTimeMs` 和现有 `mappedObjects[]` 值，写回会同步到底层 objectTable。 |
+| `canOpen.dataConfig.ioMappings[]` | 从 `canopen.data` record 5 解析，并用 AutoShop 从站设置页 `I/O映射` 表校准的只读视图；包含 `direction`、PDO `number`、`mappingIndex`、`variableRange`、D 起止寄存器、字节/字/位长度和 source offset。当前直接修改会被拒绝。 |
 | `canOpen.dataConfig.objectTable[]` | `canopen.data` record 2 的 14 字节对象条目展开，保留 `index/subIndex/byteLength/dataHex/rawValueHex/valueUnsigned/sourceRecordOffset`；既有条目的 `valueUnsigned`、`dataHex`、`rawValueHex` 可写。 |
-| `canOpen.dataConfig.records[]` | `canopen.data` 的顶层 `E3/E4` record raw 摘要；当前用于后续主站、SDO、I/O Mapping 页面采样校准。 |
-| `canOpen.jsonCreateSupported` / `canOpen.dataConfig.jsonWriteSupported` | `jsonCreateSupported=false`；存在 `canopen.data` 时 `dataConfig.jsonWriteSupported=true`，仅允许修改既有 objectTable 值并重算 CRC。仍不允许从 EDS 或 JSON 直接生成/新增真实 CANopen 从站、PDO、SDO、I/O Mapping。 |
+| `canOpen.dataConfig.records[]` | `canopen.data` 的顶层 `E3/E4` record raw 摘要；record 5 已有 `ioMappings[]` 语义视图，其余仍用于后续主站、SDO 和 I/O Mapping 写回采样校准。 |
+| `canOpen.jsonCreateSupported` / `canOpen.dataConfig.jsonWriteSupported` | `jsonCreateSupported=false`；存在 `canopen.data` 时 `dataConfig.jsonWriteSupported=true`，允许修改既有 objectTable 值，或通过既有 RxPDO/TxPDO 摘要同步底层对象表并重算 CRC。仍不允许从 EDS 或 JSON 直接生成/新增真实 CANopen 从站、PDO、SDO、I/O Mapping。 |
 
-`canOpen.catalog` 只解决 EDS 目录可见性和对象字典核对，不是生成入口。`canOpen.dataConfig.objectTable[]` 已支持既有对象值窄范围写回；例如 `0x1017:0` 心跳生产时间会同步 record 2 对象表、record 3 运行镜像和启用标志，并重算 CRC。当前 `workspace apply` 仍会拒绝直接添加 `canOpen.slaves`，也不会根据 catalog 伪造 `CANopen` 配置文件。后续必须继续通过双击 CANopen 从站图标进入 AutoShop 设置页，采样主站参数、从站通用页、PDO、SDO 和 I/O Mapping 的文件差异后，才能扩大语义 JSON 写回。
+`canOpen.catalog` 只解决 EDS 目录可见性和对象字典核对，不是生成入口。`canOpen.dataConfig.objectTable[]` 已支持既有对象值窄范围写回；例如 `0x1017:0` 心跳生产时间会同步 record 2 对象表、record 3 运行镜像和启用标志，并重算 CRC。`canOpen.dataConfig.slaves[].rxPdos[]` / `txPdos[]` 是 objectTable 的 PDO 语义视图，可修改既有 PDO 的 `enabled`、`cobId`、`transmissionType`、`eventTimeMs` 和现有映射对象值；PDO 数量或映射数量变化会被拒绝。`canOpen.dataConfig.ioMappings[]` 当前只读，已在 `[1]IS620_V056` 样本上用设置页读回验证 D7000/D7400 分配。当前 `workspace apply` 仍会拒绝直接添加 `canOpen.slaves`，也不会根据 catalog 伪造 `CANopen` 配置文件。
 
-AutoShop 4.10 保存从站后会生成 `canopen.data`；当前样本确认其为 `NOC` header + `E3/E4` records + 大端 `CRC16/MODBUS` 尾校验。CLI 已将 `canopen.data` / `canopen.up` 注册到 CAN 配置节点；若工程中实际存在，`workspace export` 会把它们作为 `files[]` 原始成员导出，`workspace apply` 可按 `contentHex` / `contentBase64` 保真回写。未采样的主站参数、SDO 初始化、I/O Mapping 与 PDO property 仍只能看 raw record，不能手写生成；已采样验证的既有 objectTable 值可通过 `canOpen.dataConfig.objectTable[]` 修改。
+AutoShop 4.10 保存从站后会生成 `canopen.data`；当前样本确认其为 `NOC` header + `E3/E4` records + 大端 `CRC16/MODBUS` 尾校验。CLI 已将 `canopen.data` / `canopen.up` 注册到 CAN 配置节点；若工程中实际存在，`workspace export` 会把它们作为 `files[]` 原始成员导出，`workspace apply` 可按 `contentHex` / `contentBase64` 保真回写。未采样的主站参数、SDO 初始化、I/O Mapping 与 PDO 新增删除仍不能手写生成；已采样验证的既有 objectTable 值和既有 PDO 摘要字段可通过 `canOpen.dataConfig` 修改。
 
 ### 4.11 EtherNet/IP
 
@@ -841,7 +842,7 @@ autoshop-agent.exe ui dev-key --hwnd 0x1234 --keys "down,enter" [--format json]
 autoshop-agent.exe ui dev-h5u-tag-connection --row <n> [--inspect-only] [--input-connection-type multicast|point-to-point] [--out <dir>] [--timeout-ms 15000] [--format json]
 ```
 
-后台窗口保护会用 `SM_XVIRTUALSCREEN/SM_YVIRTUALSCREEN/SM_CXVIRTUALSCREEN/SM_CYVIRTUALSCREEN` 读取当前虚拟屏幕边界，按右下角外侧计算临时位置，因此兼容不同分辨率、缩放布局和带负坐标的多显示器。`--offscreen-visible` 大于 0 时会在屏幕边缘保留对应像素用于诊断；默认 `0` 表示完全离屏。操作结束后使用启动前保存的 `WINDOWPLACEMENT` 恢复 AutoShop 的原恢复矩形；若原来是最小化，使用不激活窗口的最小化状态恢复，避免用户从任务栏重新打开时窗口留在屏幕外；如果 AutoShop 截图期间抢到前台，会同样使用最小化兜底保护用户前台窗口。
+后台窗口保护会用 `SM_XVIRTUALSCREEN/SM_YVIRTUALSCREEN/SM_CXVIRTUALSCREEN/SM_CYVIRTUALSCREEN` 读取当前虚拟屏幕边界，按右下角外侧计算临时位置，因此兼容不同分辨率、缩放布局和带负坐标的多显示器。`--offscreen-visible` 大于 0 时会在屏幕边缘保留对应像素用于诊断；默认 `0` 表示完全离屏。操作结束后使用启动前保存的 `WINDOWPLACEMENT` 恢复 AutoShop 的原恢复矩形；若原来是最小化，会先隐藏窗口、再不激活显示并立即移到离屏位置，结束后恢复最小化状态，避免用户从任务栏重新打开时窗口留在屏幕外；如果 AutoShop 截图期间抢到前台，会同样使用最小化兜底保护用户前台窗口。`ui screenshot` 会计算 `contentRatio`，低内容整窗截图会重试；若仍疑似白客户区，会尝试 client-only fallback，成功时 JSON 返回 `method=PrintWindowClientFallback`、`clientOnly=true` 和 `warnings`。`nonBlank`/`uniqueProbe` 只能作为辅助探针，标题栏也可能让白客户区截图显示为非空。
 
 `ui open-path --title` 用于打开工程树中的 MDI 子窗口；`ui open-path --top-title` 用于打开 CANLink、CANopen、H5U 参数等同进程顶层配置窗口，JSON 会返回该顶层窗口的 `handle`，后续可传给 `ui dev-inspect-window --hwnd` 或 `ui screenshot --hwnd` 采样。`ui compile` 对应 AutoShop 的 `Ctrl+F7` 编译按钮，`ui compile-all` 对应 `F7` 全部编译，`ui run` 对应 `F5` 运行，`ui stop` 对应 `F6` 停止，`ui download` 对应 `F8` 下载，`ui upload` 对应 `F9` 上载，`ui monitor` 对应 `F3` 监控。它们在后台窗口保护内通过 AutoShop 主窗口句柄发送 `WM_COMMAND`，不会使用全局键盘、全局鼠标或剪贴板。JSON 返回包含 `commandId`、`shortcut`、`output`、`outputChanged` 和 `dialogs`；其中 `output` 来自下方“信息输出窗口”的 ListBox，`dialogs` 会采集本次命令新弹出的 AutoShop 模态提示文本和按钮。`--lines errors` 是默认值，只返回错误行；需要完整读取编译过程、时间戳和普通状态行时使用 `--lines all`。`--tail` 限制过滤后返回的末尾行数，`0` 表示全部；JSON 中 `output.count` 是控件总行数，`output.returnedCount` 是本次实际返回行数。`--dismiss-dialog=true` 会读取并自动确认 AutoShop 的连接状态类 `确定` 弹窗；`ui monitor` / `ui run` / `ui stop` 会优先处理这类弹窗，避免循环调用时堆积大量模态窗口。`ui download --yes` 会确认 AutoShop 的下载设置和下载过程提示，并返回 `confirmedDialogs`；如果遇到下载后是否运行 PLC 的提示，默认选择不运行，只有显式 `--run-after` 才会同意运行。`ui upload` 只触发并采集上载弹窗/输出，不自动确认可能改写当前 AutoShop 会话的上载流程。若需要人工保留弹窗可设为 `false`。
 
@@ -887,7 +888,6 @@ autoshop-agent.exe windows [--json]
 5. 重新 `workspace export --force` 到固定目录，读取 JSON 确认语义字段已回读为预期值。
 
 当前没有 PLC 真机后端。所有真机相关指令只能作为接口占位和离线测试入口使用。
-
 
 
 
