@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.135`。
+适用版本：`autoshop-agent.exe v0.8.137`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -474,7 +474,7 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 ### 4.10.1 CANopen catalog / dataConfig
 
-当 `canLink.portConfig.parameters.protocol` 为 `CANOpen` 时，CAN 配置节点会按 AutoShop 工程树导出为 `配置/CAN(CANopen)/_node.config.json`，并附加只读 `canOpen` 诊断对象；CANLink 协议仍导出为 `配置/CAN(CANLink)/_node.config.json`。
+当 `canLink.portConfig.parameters.protocol` 为 `CANOpen` 时，CAN 配置节点会按 AutoShop 工程树导出为 `配置/CAN(CANopen)/_node.config.json`，并附加 `canOpen` 诊断/窄范围写回对象；CANLink 协议仍导出为 `配置/CAN(CANLink)/_node.config.json`。
 
 | 字段 | 含义 |
 | --- | --- |
@@ -485,13 +485,13 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `canOpen.catalog.devices[].objectDictionary[]` | EDS 里的对象字典条目，保留 `index/subIndex/objectType/dataType/accessType/defaultValue/pdoMapping` 等诊断字段。 |
 | `canOpen.dataConfig` | 当工程存在 `canopen.data` 时导出。解析 `NOC` header、CRC16/MODBUS、节点列表、对象表、EDS identity 匹配、RxPDO/TxPDO 摘要和 raw records。 |
 | `canOpen.dataConfig.slaves[]` | 从真实 `canopen.data` 回读的节点，包含 `nodeId`、匹配到的 EDS `sourceRelative/catalogKey`、`vendorNumber/productNumber/revisionNumber`、`rxPdos[]` 和 `txPdos[]`。 |
-| `canOpen.dataConfig.objectTable[]` | `canopen.data` record 2 的 14 字节对象条目展开，保留 `index/subIndex/byteLength/dataHex/rawValueHex/sourceRecordOffset`。 |
+| `canOpen.dataConfig.objectTable[]` | `canopen.data` record 2 的 14 字节对象条目展开，保留 `index/subIndex/byteLength/dataHex/rawValueHex/valueUnsigned/sourceRecordOffset`；既有条目的 `valueUnsigned`、`dataHex`、`rawValueHex` 可写。 |
 | `canOpen.dataConfig.records[]` | `canopen.data` 的顶层 `E3/E4` record raw 摘要；当前用于后续主站、SDO、I/O Mapping 页面采样校准。 |
-| `canOpen.jsonCreateSupported` / `canOpen.dataConfig.jsonWriteSupported` | 当前固定为 `false`。已有样本可只读解析，但不允许从 EDS 或 JSON 直接生成/修改真实 CANopen 从站、PDO、SDO、I/O Mapping。 |
+| `canOpen.jsonCreateSupported` / `canOpen.dataConfig.jsonWriteSupported` | `jsonCreateSupported=false`；存在 `canopen.data` 时 `dataConfig.jsonWriteSupported=true`，仅允许修改既有 objectTable 值并重算 CRC。仍不允许从 EDS 或 JSON 直接生成/新增真实 CANopen 从站、PDO、SDO、I/O Mapping。 |
 
-`canOpen.catalog` 只解决 EDS 目录可见性和对象字典核对；`canOpen.dataConfig` 解决已有 AutoShop 保存样本的只读反解。二者都不是写回入口。当前 `workspace apply` 会明确拒绝直接添加 `canOpen.slaves`，也不会根据 catalog 伪造 `CANopen` 配置文件。后续必须继续通过双击 CANopen 从站图标进入 AutoShop 设置页，采样主站参数、从站通用页、PDO、SDO 和 I/O Mapping 的文件差异后，才能开放语义 JSON 写回。
+`canOpen.catalog` 只解决 EDS 目录可见性和对象字典核对，不是生成入口。`canOpen.dataConfig.objectTable[]` 已支持既有对象值窄范围写回；例如 `0x1017:0` 心跳生产时间会同步 record 2 对象表、record 3 运行镜像和启用标志，并重算 CRC。当前 `workspace apply` 仍会拒绝直接添加 `canOpen.slaves`，也不会根据 catalog 伪造 `CANopen` 配置文件。后续必须继续通过双击 CANopen 从站图标进入 AutoShop 设置页，采样主站参数、从站通用页、PDO、SDO 和 I/O Mapping 的文件差异后，才能扩大语义 JSON 写回。
 
-AutoShop 4.10 保存从站后会生成 `canopen.data`；当前样本确认其为 `NOC` header + `E3/E4` records + 大端 `CRC16/MODBUS` 尾校验。CLI 已将 `canopen.data` / `canopen.up` 注册到 CAN 配置节点；若工程中实际存在，`workspace export` 会把它们作为 `files[]` 原始成员导出，`workspace apply` 可按 `contentHex` / `contentBase64` 保真回写。未采样的主站参数、SDO 初始化、I/O Mapping 与 PDO property 仍只能看 raw record，不能手写生成。
+AutoShop 4.10 保存从站后会生成 `canopen.data`；当前样本确认其为 `NOC` header + `E3/E4` records + 大端 `CRC16/MODBUS` 尾校验。CLI 已将 `canopen.data` / `canopen.up` 注册到 CAN 配置节点；若工程中实际存在，`workspace export` 会把它们作为 `files[]` 原始成员导出，`workspace apply` 可按 `contentHex` / `contentBase64` 保真回写。未采样的主站参数、SDO 初始化、I/O Mapping 与 PDO property 仍只能看 raw record，不能手写生成；已采样验证的既有 objectTable 值可通过 `canOpen.dataConfig.objectTable[]` 修改。
 
 ### 4.11 EtherNet/IP
 

@@ -3,7 +3,7 @@
 AutoShop Agent Interface packages a Codex skill and the `autoshop-agent.exe` CLI for operating Inovance AutoShop Lite/H5U projects through a JSON workspace workflow.
 
 - Supported AutoShop baseline: AutoShop V4.10.0.0.
-- Packaged CLI version: `0.8.136`.
+- Packaged CLI version: `0.8.137`.
 - License: MIT.
 
 ## Contents
@@ -37,7 +37,7 @@ The workspace JSON flow supports editing ST/POU content, variables, structures, 
 
 For CAN(CANLink), `canLink.portConfig` edits the CAN root parameters. AutoShop 4.10 H5U `CANLink.prg` is exported as `canLink.programConfig`; current semantic writes support existing IS/SV slave `stationNumber`, `statusRegister`, `startStopElement`, sampled send configuration add/edit/delete, and sampled receive allow-list add/edit/delete. Changing an existing slave station number migrates sampled send/receive references from the old station to the new station and recalculates the `CANLink.prg` CRC. Omitting `slaves` leaves the station list unchanged; keeping the exported array length allows existing station edits; an empty `slaves` array or any length change is rejected as unsupported station add/delete. Empty `sendConfigurations` or `receiveConfigurations` arrays intentionally delete that class; omitted arrays leave it unchanged.
 
-For CANopen, the CAN node is exported as `配置/CAN(CANopen)/_node.config.json` when the root protocol is CANOpen. The CLI exports a read-only `canOpen.catalog` from AutoShop EDS files and a read-only `canOpen.dataConfig` from existing `canopen.data` files, including NOC header/checksum, node IDs, EDS identity matches, object table entries, PDO summaries, and raw records. Raw `canopen.data` / `canopen.up` files are still preserved byte-for-byte when present. CANopen master/slave/PDO/SDO/I/O mapping semantic writes still require AutoShop setting-page samples and are rejected when unsupported.
+For CANopen, the CAN node is exported as `配置/CAN(CANopen)/_node.config.json` when the root protocol is CANOpen. The CLI exports `canOpen.catalog` from AutoShop EDS files and `canOpen.dataConfig` from existing `canopen.data` files, including NOC header/checksum, node IDs, EDS identity matches, object table entries, PDO summaries, and raw records. Existing `canOpen.dataConfig.objectTable[]` values can be edited through `valueUnsigned`, `dataHex`, or `rawValueHex`; known mirrors such as `0x1017:0` heartbeat producer time are synchronized for AutoShop UI readback. Raw `canopen.data` / `canopen.up` files are still preserved byte-for-byte when present. CANopen master/slave add-delete/PDO/SDO/I/O mapping semantic writes still require AutoShop setting-page samples and are rejected when unsupported.
 
 ## Hardware Boundary
 
