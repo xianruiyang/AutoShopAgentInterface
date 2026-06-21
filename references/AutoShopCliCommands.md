@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.149`。
+适用版本：`autoshop-agent.exe v0.8.150`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -100,7 +100,7 @@ autoshop-agent.exe <command> [subcommand] [flags]
 | 配置/运动控制轴 | `配置/运动控制轴/_node.config.json` | 优先改 `motionAxis.axes[].parameters`。 |
 | 配置/轴组设置 | `配置/轴组设置/_node.config.json` | 优先改 `axisGroup.groups[].parameters`。 |
 | 配置/电子凸轮 | `配置/电子凸轮/_node.config.json` | 优先改 `electronicCam.cams`、`parameters.masterRange/slaveRange` 和已验证的 18 字节点表 `points`。 |
-| 配置/CAN(CANLink) | `配置/CAN(CANLink)/_node.config.json` | 优先改 `canLink.portConfig.parameters.protocol/stationNumber/baudRateKbps`；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前支持既有 IS/SV 从站站号/D/M、已采样发送配置和接收许可表写回，`syncView` 为只读派生视图，`syncMappings` 为同一底层发送配置的可写同步写 alias；协议为 `CANOpen` 时会附加 `canOpen.catalog` 和可窄范围写回的 `canOpen.dataConfig`。 |
+| 配置/CAN(CANLink) | `配置/CAN(CANLink)/_node.config.json` | 优先改 `canLink.portConfig.parameters.protocol/stationNumber/baudRateKbps`；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前支持从站表已采样行新增/删除、既有从站站号/D/M、已采样发送配置和接收许可表写回，`syncView` 为只读派生视图，`syncMappings` 为同一底层发送配置的可写同步写 alias；协议为 `CANOpen` 时会附加 `canOpen.catalog` 和可窄范围写回的 `canOpen.dataConfig`。 |
 | 配置/EtherCAT | `配置/EtherCAT/_node.config.json` | 改 `ethercat.parameters` 和 `ethercat.slaves`；新增从站优先写 AutoShop 工具箱叶子名称 `toolboxName`，`catalogKey` 仅用于高级诊断。 |
 | 配置/EtherNet/IP | `配置/EtherNet/IP/_node.config.json` | 改 `ethernetIP.devices`、标签、连接和 I/O 数据集；新增设备可只写 `internalName` / `deviceName` / `toolboxName`，`catalogKey` 仅用于高级诊断。 |
 | 其他配置节点 | `配置/<节点名>/_node.config.json` | 语义字段不存在时才改 `files[].contentHex` 或 `files[].contentBase64`。 |
@@ -420,8 +420,8 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `canLink.programConfig.network.masterStationNumber` | 主站号；当前样本 record 0 解析，正常与根口站号一致。 |
 | `canLink.programConfig.network.baudRateKbps` | CANLink3.0 网络波特率，当前样本 record 0 解析为 `500`。 |
 | `canLink.programConfig.network.heartbeatMs` | 网络心跳周期，当前样本 record 0 解析为 `500` ms。 |
-| `canLink.programConfig.slaves[].stationNumber` | 既有从站号；当前支持修改既有从站号，写回时会同步迁移已采样发送配置、接收许可表和只读 `syncView` 中引用的旧站号。 |
-| `canLink.programConfig.slaves[].type` / `typeCode` | 从站类型；当前已采样 `typeCode=5` 为 `IS/SV(伺服)`。 |
+| `canLink.programConfig.slaves[].stationNumber` | 从站号；当前支持修改既有从站号，并支持按真实站点管理 add/delete 样本新增或删除未被发送/接收配置引用的从站行。既有从站改号时会同步迁移已采样发送配置、接收许可表和只读 `syncView` 中引用的旧站号。 |
+| `canLink.programConfig.slaves[].type` / `typeCode` | 从站类型；当前已采样 `typeCode=0` 为 `PLC(H0U/H1U/H2U系列)`，`typeCode=1/5` 为 `IS/SV(伺服)`。 |
 | `canLink.programConfig.slaves[].statusRegister` | CANLink3.0 主窗口“状态码寄存器(D)”，例如 `D1001`。当前已支持对既有从站写回。 |
 | `canLink.programConfig.slaves[].startStopElement` | CANLink3.0 主窗口“从站启停元件(M)”，例如 `M1001`。当前已支持对既有从站写回。 |
 | `canLink.programConfig.sendConfigurations[]` | CANLink3.0 “发送配置”页条目。当前按真实样本支持 `time-ms`、`event-ms`、`event-m` 三类触发条目的新增、删除和修改；字段包括站号、D/H 寄存器、功能码、寄存器数量、周期或触发 M。 |
@@ -432,7 +432,7 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 
 可直接改 `parameters`，也可在未改 `parameters` 时修改 `portConfig.protocol`、`portConfig.station.number`、`portConfig.baudRate.kbps` 这些嵌套字段。`workspace apply` 会写回 `PortConfig.cfg`，并同步 `.hcpp` 工程包成员快照。
 
-`programConfig` 写回只承诺当前已采样验证的既有从站 `stationNumber`、`statusRegister`/`startStopElement`、`sendConfigurations[]` 中的 `time-ms`/`event-ms`/`event-m` 条目、`syncMappings[]` 既有同步写行 alias，以及 `receiveConfigurations[]` 接收许可条目。既有从站改号时，CLI 会把原站号在已采样发送配置、同步写 alias 和接收许可表中的引用迁移到新站号。`slaves` 字段省略表示不修改从站列表；保持导出的数组长度时只允许改既有从站字段；空数组或数量变化会被判定为从站新增/删除并明确拒绝。发送/接收数组如果在 JSON 中出现，会按数组内容重建对应 KLC record；空数组表示删空该类配置，字段省略表示不修改。`syncMappings[]` 出现时会映射回对应 `sendConfigurations[]` 既有行，新增/删除同步写行会明确拒绝；若同次 JSON 同时编辑 `sendConfigurations[]` 和 `syncMappings[]`，二者必须语义一致。写回时 CLI 会在 `CANLink.prg` 内改对应字段、重算 record 长度和尾部 `CRC16/MODBUS`，并同步 `.hcpp`。如果 `programConfig.parseError` 存在且没有语义编辑，apply 保持 no-op；如果用户在不可解析样本上做语义编辑，会拒绝。
+`programConfig` 写回只承诺当前已采样验证的 `slaves[]` 站点表、既有从站 `stationNumber`、`statusRegister`/`startStopElement`、`sendConfigurations[]` 中的 `time-ms`/`event-ms`/`event-m` 条目、`syncMappings[]` 既有同步写行 alias，以及 `receiveConfigurations[]` 接收许可条目。既有从站改号时，CLI 会把原站号在已采样发送配置、同步写 alias 和接收许可表中的引用迁移到新站号。`slaves` 字段省略表示不修改从站列表；数组出现时按目标从站表重建 CANLink record 1 与 record 6，可新增/删除未被发送或接收配置引用的从站行。每个新增从站必须有 `stationNumber`、`typeCode` 或 `type`、`statusRegister`、`startStopElement`；空数组会被拒绝，因为 AutoShop 清空配置样本保存为“无配置数据”，不能作为可下载站点表；删除仍被 `sendConfigurations[]` / `receiveConfigurations[]` 引用的从站也会拒绝，除非同次 JSON 同步更新或删除对应配置。发送/接收数组如果在 JSON 中出现，会按数组内容重建对应 KLC record；空数组表示删空该类配置，字段省略表示不修改。`syncMappings[]` 出现时会映射回对应 `sendConfigurations[]` 既有行，新增/删除同步写行会明确拒绝；若同次 JSON 同时编辑 `sendConfigurations[]` 和 `syncMappings[]`，二者必须语义一致。写回时 CLI 会在 `CANLink.prg` 内改对应字段、重算 record 长度和尾部 `CRC16/MODBUS`，并同步 `.hcpp`。如果 `programConfig.parseError` 存在且没有语义编辑，apply 保持 no-op；如果用户在不可解析样本上做语义编辑，会拒绝。
 
 示例：在导出的 JSON 中保留对应对象，只修改既有条目，不新建对象：
 
@@ -485,7 +485,7 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 }
 ```
 
-当前未完成的边界：CANLink3.0 从站新增/删除，以及同步写新增/删除行或未采样 UI 约束，都必须继续按真实 AutoShop 样本反解后再开放；本机已扫描到的 `CANLink.prg` 样本全部仍包含 1 个从站记录，没有真实 host-only 删除样本，因此不能用猜测 JSON 生成生产工程。
+当前未完成的边界：CANLink3.0 同步写新增/删除行或未采样 UI 约束仍必须继续按真实 AutoShop 样本反解后再开放。`slaves[]` 只支持已采样站点管理 record 1/6 形状下的未引用从站新增/删除；删除全部从站会被拒绝，因为 AutoShop 清空配置样本保存后提示“无配置数据”，不能作为可下载 host-only 配置。
 
 ### 4.10.1 CANopen catalog / dataConfig
 
@@ -858,6 +858,7 @@ autoshop-agent.exe ui screenshot --hwnd 0x1234 --out window.png [--allow-minimiz
 autoshop-agent.exe ui dev-audit-pages --pid <pid> --path "配置/EtherCAT/GR10_0808ETNE" --preset ethercat --out <dir> [--format json]
 autoshop-agent.exe ui dev-audit-pages --pid <pid> --path "配置/EtherCAT/GS20-ECT-8L" --pages "common=110,28;process=110,76;startup=110,126;slot=110,174;io=110,224;info=110,272;status=110,320" --out <dir> [--format json]
 autoshop-agent.exe ui dev-clicks --hwnd 0x1234 --clicks "row=45,42" [--double] [--post] [--direct] [--format json]
+autoshop-agent.exe ui dev-button-click --hwnd 0x1234 [--timeout-ms 5000] [--format json]
 autoshop-agent.exe ui dev-key --hwnd 0x1234 --keys "down,enter" [--format json]
 autoshop-agent.exe ui dev-h5u-tag-connection --row <n> [--inspect-only] [--input-connection-type multicast|point-to-point] [--out <dir>] [--timeout-ms 15000] [--format json]
 ```
@@ -871,6 +872,8 @@ autoshop-agent.exe ui dev-h5u-tag-connection --row <n> [--inspect-only] [--input
 `ui focus` 只通过 `MDIClient` 的 `WM_MDIACTIVATE` 激活子窗口；`ui open` / `ui refresh` / `ui close` / `ui close-project` / `ui restore-project` 默认使用指定窗口或控件句柄消息，并统一在离屏后台保护中执行。`ui close --title` 可关闭任意已打开的 MDI 参数页，适合批量手动验证时“打开、截图、关闭”以避免 AutoShop 子窗口数量上限影响后续打开。`ui restore-project --project <dir>` 在没有历史 state 文件时会构造临时恢复状态并通过同一套离屏打开流程打开指定工程；若传入 `--state` 则仍严格读取该 state。`ui close-project` / `ui refresh-project` 遇到“工程已修改，是否保存?”时默认保存关闭；可用 `--save-prompt discard` 不保存关闭，`cancel` 取消关闭，`fail` 保持失败。若 AutoShop 弹出其他工程错误或普通确认对话框，CLI 会失败并要求人工处理。
 
 `ui dev-h5u-tag-connection` 是开发期采样命令，只用于研究 AutoShop H5U 普通连接/标签连接编辑子对话框，不进入生产编辑流程。正式内容修改仍必须优先改 workspace JSON 并执行 `workspace apply`。该开发命令同样复用后台窗口保护，并在打开“编辑连接”对话框、组合框下拉窗口等关联顶层窗口时立即移动到离屏位置，避免子框短暂出现在用户当前桌面。传入 `--out` 时会离屏保存编辑子框、内容子窗口和输入连接类型下拉框截图，并在 JSON 输出中附带子控件枚举结果。传入 `--inspect-only` 时只打开、截图、枚举并确认关闭子框，不修改下拉字段。
+
+`ui dev-button-click` 是开发期采样命令，对指定按钮窗口句柄发送 `BM_CLICK` 并用超时保护等待返回，适合处理 AutoShop 模态提示中的“确定/是/完成”等标准按钮。它只用于验证/采样，不作为生产工程编辑入口。
 
 `ui dev-audit-pages` 是开发期页面截图审查命令，只用于验证/采样，不进入生产编辑流程。命令会离屏打开指定工程树路径，按 `--preset` 或 `--pages name=x,y;...` 点击左侧页面导航并截图；截图文件名包含页序号，例如 `SV820N_1-01-common.png`，即使中文页面名被文件名清洗为 `window` 也不会覆盖同一从站的其它页面。正式内容修改仍必须通过 workspace JSON 完成。
 
