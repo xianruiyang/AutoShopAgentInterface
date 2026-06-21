@@ -297,12 +297,13 @@ canLink.programConfig.slaves[].statusRegister
 canLink.programConfig.slaves[].startStopElement
 canLink.programConfig.sendConfigurations[]
 canLink.programConfig.receiveConfigurations[]
+canLink.programConfig.syncMappings[]
 canLink.programConfig.syncView[]
 ```
 
 `programConfig` is parsed from KLC records in `CANLink.prg`; the tail checksum is `CRC16/MODBUS` stored big-endian. Unknown records stay in `programConfig.records[].dataHex`.
 
-Current semantic write support is deliberately narrow: edit existing `slaves[].stationNumber`, `slaves[].statusRegister`, `slaves[].startStopElement`, sampled `sendConfigurations[]`, and sampled `receiveConfigurations[]` values in the exported object. When an existing slave station number changes, sampled send/receive station references are migrated from the old station to the new station. Omitting `slaves` leaves the current station list unchanged; keeping the exported array length allows existing station field edits; an empty array or any length change is treated as station add/delete and is rejected until a real AutoShop host-only/deleted-station sample exists. `sendConfigurations[]` supports add/delete/edit for sampled `time-ms`, `event-ms`, and `event-m` trigger modes. `receiveConfigurations[]` supports add/delete/edit for sampled receive allow-list entries. If a send or receive array appears in JSON, apply rebuilds the corresponding KLC record from the array; an empty array deletes that sampled configuration class, while an omitted array leaves it unchanged. `syncView[]` is a read-only derived AutoShop view; edit the matching `sendConfigurations[]` entry instead. Add/delete station, complete sync-trigger semantics, and CANopen EDS/PDO/SDO/I/O Mapping still require real AutoShop samples before they can become semantic JSON.
+Current semantic write support is deliberately narrow: edit existing `slaves[].stationNumber`, `slaves[].statusRegister`, `slaves[].startStopElement`, sampled `sendConfigurations[]`, sampled existing `syncMappings[]` rows, and sampled `receiveConfigurations[]` values in the exported object. When an existing slave station number changes, sampled send/sync/receive station references are migrated from the old station to the new station. Omitting `slaves` leaves the current station list unchanged; keeping the exported array length allows existing station field edits; an empty array or any length change is treated as station add/delete and is rejected until a real AutoShop host-only/deleted-station sample exists. `sendConfigurations[]` supports add/delete/edit for sampled `time-ms`, `event-ms`, and `event-m` trigger modes. `syncMappings[]` is a writable alias for existing AutoShop sync-write rows backed by `sendConfigurations[]`; keep the exported row identity and change trigger/register/count fields there when you want the sync-write-oriented view. If both `sendConfigurations[]` and `syncMappings[]` are edited in one JSON, they must be semantically identical. `receiveConfigurations[]` supports add/delete/edit for sampled receive allow-list entries. If a send or receive array appears in JSON, apply rebuilds the corresponding KLC record from the array; an empty array deletes that sampled configuration class, while an omitted array leaves it unchanged. `syncView[]` is a read-only derived AutoShop view. Add/delete station, add/delete sync rows, and CANopen EDS/PDO/SDO/I/O Mapping add/delete still require real AutoShop samples before they can become semantic JSON.
 
 When `canLink.portConfig.parameters.protocol` is `CANOpen`, export also adds:
 
@@ -324,4 +325,5 @@ When a semantic field does not exist, use:
 - page fields with `editable=true`
 
 Keep raw edits narrow and validate with `workspace apply --dry-run`, readback SHA, and AutoShop UI when visibility matters.
+
 
