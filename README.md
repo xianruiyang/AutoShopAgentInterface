@@ -1,16 +1,58 @@
 # AutoShop Agent CLI
 
-`AutoShopAgentInterface` 是 Codex skill 分发包，CLI 可执行文件作为 skill 资源放在：
+`AutoShopAgentInterface` 是未安装的 Codex skill 包，最终 CLI 可执行文件作为 skill 资源放在：
 
 ```text
 scripts\autoshop-agent.exe
 ```
 
-本包只保留运行所需的 CLI、skill 入口和参考文档，不包含开发源码、样本工程或本机路径。维护时应先更新开发源，再同步到本分发包和已安装 skill。
+源码、开发知识文档和样例配置放在单独的开发仓库中；本仓库只保留可分发的 skill 资源、CLI 可执行文件和必要 reference 文档。
 
-## 包内参考文档
+## Skill 同步顺序
 
-本包内参考文档位于：
+本仓库是未安装的可分发 skill 包，不是源码开发仓库。修改 skill 说明、reference、CLI 能力或同步规则时，应先在开发源更新源码、`knowledge/`、README 和运行记录；再同步到本发布包 `<package-dir>`；最后同步到 Codex 已安装目录 `<installed-skill-dir>`。不要把已安装 skill 当成源头直接反向开发。
+
+当前 EtherCAT/IS620N 从站模板的源文件是：
+
+```text
+knowledge\AutoShopEthercatSlaveTemplates.md
+```
+
+发布包路径与隐私策略的源文件是：
+
+```text
+knowledge\AutoShopSkillPathPolicy.md
+```
+
+H5U AutoShop 快速资料的源文件是：
+
+```text
+knowledge\AutoShopH5uQuickReference.md
+```
+
+瘦身后的 skill 入口源文件是：
+
+```text
+knowledge\AutoShopSkillEntry.md
+```
+
+操作流程和 workspace JSON 细节拆分为：
+
+```text
+knowledge\AutoShopAgentWorkflow.md
+knowledge\AutoShopWorkspaceJsonReference.md
+```
+
+随包 H5U Markdown 手册源文件是：
+
+```text
+knowledge\AutoShopH5uEasyProgrammingApplicationManual.md
+knowledge\AutoShopH5uPlcInstructionManualCn.md
+knowledge\AutoShopH5uSeriesUserManualCn.md
+knowledge\AutoShopH5uSeriesBrochureEn.md
+```
+
+同步目标是：
 
 ```text
 references\AutoShopEthercatSlaveTemplates.md
@@ -54,7 +96,7 @@ go build -trimpath -ldflags "-s -w" -o <package-dir>\scripts\autoshop-agent.exe 
 - `pou` 底层兼容/诊断入口；工程内容新增、删除、修改的主流程必须走 `workspace export/apply` 的 JSON/文本镜像
 - `st lint/parse/symbols/refs/format/scaffold/instruction`
 - `var list/export/system list/validate`
-- `workspace` 语义/节点 JSON：全局变量表 `variables`、自定义结构体 `definition.members`、POU `*.pou.json`、中断触发 `_interrupt-triggers.json`、功能块实例 `instances`、输入滤波 `inputFilter.parameters`、模块配置 `moduleConfig.modules`、电子凸轮 `electronicCam.cams`、CAN(CANLink) `canLink.portConfig/programConfig`、CANopen `canOpen.catalog`、可写既有 `canOpen.dataConfig.objectTable/slaves[].general.producerHeartbeatTimeMs/rxPdos/txPdos/ioMappings[].startRegister` 与只读 `slaves[].sdoInit` 空表边界、EtherCAT `ethercat.parameters/slaves`、EtherNet/IP `ethernetIP.devices/producerTags/serverMessageTags/adapter`（含从站 `general/info/status/pages`、H5U `connections/tagConnections` 连接详情）、运动控制轴 `motionAxis.axes`、轴组设置 `axisGroup.groups`、配置树 `_node.config.json`
+- `workspace` 语义/节点 JSON：全局变量表 `variables`、自定义结构体 `definition.members`、POU `*.pou.json`、中断触发 `_interrupt-triggers.json`、功能块实例 `instances`、输入滤波 `inputFilter.parameters`、模块配置 `moduleConfig.modules`、电子凸轮 `electronicCam.cams`、CAN(CANLink) `canLink.portConfig/programConfig`、CANopen `canOpen.catalog` 与可写既有 `canOpen.dataConfig.objectTable/slaves[].general.producerHeartbeatTimeMs/rxPdos/txPdos/sdoInit/ioMappings[].startRegister`、EtherCAT `ethercat.parameters/slaves`、EtherNet/IP `ethernetIP.devices/producerTags/serverMessageTags/adapter`（含从站 `general/info/status/pages`、H5U `connections/tagConnections` 连接详情）、运动控制轴 `motionAxis.axes`、轴组设置 `axisGroup.groups`、配置树 `_node.config.json`
 - `build check/diagnostics`
 - `diagnose project/error-code`
 - `ui windows/refresh/refresh-path/close-project/restore-project/refresh-project/close/open/focus/tree/screenshot/compile/compile-all/run/stop/download/upload/monitor/output`
@@ -183,7 +225,7 @@ $env:AUTOSHOP_AGENT_CONFIG = "<config.json>"
 
 既有中断程序触发设置会导出为 `编程/程序块/_interrupt-triggers.json`；优先编辑 `interrupts[].trigger`，支持外部中断 `X0..X3 + falling|rising|both`、定时中断通道、比较中断 `compareIndex=1..16`，未知或歧义编码可用 `type=raw` 写 `rawCode`。应用时会写回 AutoShop 4.10 `.hcp` 中断 `<POUID>` 并保持 `<Timer>0</Timer>`，同时同步 `.hcpp`。
 
-CAN(CANLink) 根口参数仍通过 `canLink.portConfig` 编辑；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前已支持修改既有 IS/SV 从站的 `stationNumber`、`statusRegister`/`startStopElement`，并支持已采样 `time-ms`/`event-ms`/`event-m` 发送配置和接收许可表的新增、删除、修改、CRC 重算；既有从站改号时会同步迁移已采样发送/接收配置里的旧站号引用。`slaves` 省略表示不改从站列表，空数组或数量变化表示新增/删除尝试并会被拒绝。`syncView` 是只读派生视图；从站新增/删除和完整同步触发语义还需要继续按真实样本反解。切到 CANopen 时，配置节点会按 UI 树导出为 `配置/CAN(CANopen)/_node.config.json`，并附加 `canOpen.catalog` 和 `canOpen.dataConfig`：`catalog` 从 AutoShop `sys/eds` 解析 EDS identity、支持波特率、PDO 摘要和对象字典；`dataConfig` 从已有 `canopen.data` 的 `NOC` header、`E3/E4` records 和 CRC16/MODBUS 中回读节点、匹配 EDS、对象表、从站 General 摘要、RxPDO/TxPDO 摘要、I/O 映射 D 寄存器分配、服务数据对象页空表边界和 raw records。`canopen.data` / `canopen.up` 仍作为 CAN 节点原始 `files[]` 成员保真导出和回写；当前已验证可修改既有 `canOpen.dataConfig.objectTable[]` 的 `valueUnsigned`/`dataHex`/`rawValueHex` 并重算 CRC，也可通过 `canOpen.dataConfig.slaves[].general.producerHeartbeatTimeMs` 修改同一个 `0x1017:0` 心跳生产时间，写回时会同步 AutoShop record 3 运行镜像和启用标志；既有 `rxPdos[]`/`txPdos[]` 摘要可写 `enabled`、`cobId`、`transmissionType`、`eventTimeMs` 和现有 `mappedObjects[]` 值；既有 `ioMappings[]` 的 `startRegister`/`variableRange`/`endRegister` 可调整 D 起始地址，写回会更新 record 5 并重算 CRC，方向、PDO 编号、映射索引和长度仍不可变；`slaves[].sdoInit` 当前按已读到的服务数据对象页导出为空数组，非空新增/编辑/删除会被明确拒绝。CANopen 主站深层参数、从站新增/删除、SDO Init 非空配置、General 其它字段与 PDO/I/O Mapping 新增删除仍未开放语义写回，直接编辑 `canOpen` 从站或 `canOpen.portConfig` 会被拒绝，根口参数请改 `canLink.portConfig.parameters`；导出 JSON 中未改动的 `canOpen.portConfig` 旧镜像不会阻止 canonical 写回。
+CAN(CANLink) 根口参数仍通过 `canLink.portConfig` 编辑；AutoShop 4.10 H5U 样本中的 `CANLink.prg` 会导出为 `canLink.programConfig`，当前已支持修改既有 IS/SV 从站的 `stationNumber`、`statusRegister`/`startStopElement`，并支持已采样 `time-ms`/`event-ms`/`event-m` 发送配置和接收许可表的新增、删除、修改、CRC 重算；既有从站改号时会同步迁移已采样发送/接收配置里的旧站号引用。`slaves` 省略表示不改从站列表，空数组或数量变化表示新增/删除尝试并会被拒绝。`syncView` 是只读派生视图；从站新增/删除和完整同步触发语义还需要继续按真实样本反解。切到 CANopen 时，配置节点会按 UI 树导出为 `配置/CAN(CANopen)/_node.config.json`，并附加 `canOpen.catalog` 和 `canOpen.dataConfig`：`catalog` 从 AutoShop `sys/eds` 解析 EDS identity、支持波特率、PDO 摘要和对象字典；`dataConfig` 从已有 `canopen.data` 的 `NOC` header、`E3/E4` records 和 CRC16/MODBUS 中回读节点、匹配 EDS、对象表、从站 General 摘要、RxPDO/TxPDO 摘要、服务数据对象页别名、I/O 映射 D 寄存器分配和 raw records。`canopen.data` / `canopen.up` 仍作为 CAN 节点原始 `files[]` 成员保真导出和回写；当前已验证可修改既有 `canOpen.dataConfig.objectTable[]` 的 `valueUnsigned`/`dataHex`/`rawValueHex` 并重算 CRC，也可通过 `canOpen.dataConfig.slaves[].general.producerHeartbeatTimeMs` 修改同一个 `0x1017:0` 心跳生产时间，写回时会同步 AutoShop record 3 运行镜像和启用标志；既有 `rxPdos[]`/`txPdos[]` 摘要可写 `enabled`、`cobId`、`transmissionType`、`eventTimeMs` 和现有 `mappedObjects[]` 值；`slaves[].sdoInit[]` 是服务数据对象页既有行对 objectTable 的别名，可写既有行的 `valueUnsigned`/`dataHex`/`rawValueHex` 并重算 CRC，新增/删除行和下载列标记仍拒绝；既有 `ioMappings[]` 的 `startRegister`/`variableRange`/`endRegister` 可调整 D 起始地址，写回会更新 record 5 并重算 CRC，方向、PDO 编号、映射索引和长度仍不可变。CANopen 主站深层参数、从站新增/删除、General 其它字段与 PDO/SDO/I/O Mapping 新增删除仍未开放语义写回，直接编辑 `canOpen` 从站或 `canOpen.portConfig` 会被拒绝，根口参数请改 `canLink.portConfig.parameters`；导出 JSON 中未改动的 `canOpen.portConfig` 旧镜像不会阻止 canonical 写回。
 
 全局变量表会导出为 `全局变量/变量表/变量表.gvt.json`，其中 `variables` 是可直接编辑的变量数组；结构体定义会导出为 `全局变量/结构体/*.stru.json`，编辑 `definition.members`，新增 `*.stru.json` 可创建结构体；新增程序块/中断/FB/FC 时在 `编程/...` 对应目录新增 `*.pou.json`，apply 会同步 `folder.txt`、`.hcp` 和 `.hcpp`；功能块实例会导出为 `全局变量/功能块实例/功能块实例.fbi.json`，编辑 `instances`；配置树节点会导出为 `配置/<节点名>/_node.config.json`。输入滤波参数编辑 `配置/输入滤波/_node.config.json` 里的 `inputFilter.parameters`；模块配置编辑 `配置/模块配置/_node.config.json` 里的 `moduleConfig.modules`，每个槽位包含 `slot`、`model`、`identity`、`moduleTypeCode`、`instance`、`ioSignals`、`moduleParameters` 和保底回写用 `parametersHex`，可用已知 `model` 加空 `parametersHex` 创建样本支持的 GL10 模块，`ioSignals` 可修改已有 X/Y 地址但数量必须与该模块私有参数中的地址字段一致。`moduleParameters` 把同一类 UI 页面映射成可重复结构：4DA/4AD 是同一通道页重复 4 次，8TC/4TC/4PT 的 `通道X-通道Y` 是同一通道 schema 的分组数组；已确认字段可直接编辑，基本配置页中尚未拆清的位域保留 `rawCode`，未知私有字节继续由 `parametersHex` 保真兜底。运动控制轴编辑 `配置/运动控制轴/_node.config.json` 里的 `motionAxis.axes`：常用字段在 `parameters`，底层 UI/编译记录在 `uiRecords`/`compilerRecords`，当前支持修改既有轴参数、在数组末尾追加默认轴，空轴工程会导出空数组并可从 0 开始追加，并同步写回 `EtherCat.dat`、`EtherCat.tmp`、`EtherCat.datBAK`，删除或中间插入轴会拒绝；基本设置里的 `virtualAxisMode` 对应“虚轴模式”，`autoMappingEnabled` 对应“自动映射”，`outputDevice` 对应“输出设备”，可写 `未分配` 清除绑定，也可写 EtherCAT 从站名、`deviceVersion`、`productCode`、从站 `key` 或 `index:N`，由 CLI 根据该从站已选 CiA402 PDO 生成运动轴绑定 UI/编译记录；模式/参数设置里的 `encoderMode` 使用 `增量模式`/`绝对模式`，并会同步 AutoShop 实际保存的 `encoderModeEffective` 与 `encoderModeLinkedFlag` 编译记录、可见 UI 记录和 `ignoreLimitAfterErrorStop` 联动值；`axisMotionMode` 使用 `线性模式`/`旋转模式`，`softwareLimitEnabled` 为软件限位使能布尔值；单位换算里的 `reverseDirection` 对应“反向”复选框，写回时会同步 `0x80000118` 可见复选框位和 `0x80000117` 联动标志，`gearDeviceEnabled` 对应“使用变速装置”，`pulsesPerRevolution` 使用十进制数，AutoShop 的 `16#1000000` 对应 `16777216`；为匹配 AutoShop 手动保存行为，`axisMotionMode` 或 `encoderMode` 改动时会同步 `ignoreLimitAfterErrorStop`：增量模式或旋转模式为 `true`，绝对+线性模式为 `false`；AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord，语义 apply 不强行改这个旧编译记录；原点返回设置里的 `homeOriginSignal`、`homeZSignal`、`homePositiveLimit`、`homeNegativeLimit` 使用 `未分配`/`使用`/`不使用`，`homeReturnDirection`、`homeInputDetectionDirection` 使用 `未分配`/`正向`/`负向`，apply 会拒绝正负限位同时使用，并对已确认组合自动同步 `homeMethodNumber`。轴组设置编辑 `配置/轴组设置/_node.config.json` 里的 `axisGroup.groups`：当前支持修改既有轴组、在数组末尾追加默认轴组，空轴组工程会导出空数组并可从 0 开始追加，`xAxis`/`yAxis`/`zAxis`/`auxiliaryAxis` 可填轴名或 `未分配`，删除或中间插入轴组会拒绝；同一次 apply 同时修改运动轴和轴组时，会对同一个 `EtherCat.dat` 串行叠加语义改动。EtherCAT 常规参数优先编辑 `配置/EtherCAT/_node.config.json` 里的 `ethercat.parameters`；当前只允许编辑已确认的 `cycleTimeUs`、`syncOffsetPercent`、`autoRestartSlave`、`aliasEnabled`，其他可解析私有记录只在 `ethercat.records` 中以 `parameter_0x...` 展示且 `editable=false`，不允许写回。其他配置节点编辑 `files[].contentHex` 或 `files[].contentBase64` 后应用。Windows 保留设备名会使用安全目录名，例如 AutoShop 的 `配置/COM0` 镜像为 `配置/COM0_/_node.config.json`，JSON 内 `treePath` 仍保留原始树路径。保存后统一应用并刷新：
 
@@ -224,5 +266,5 @@ EtherCAT/EtherNet/IP 从站新增时，JSON 面向用户的字段使用 AutoShop
 <package-dir>\scripts\autoshop-agent.exe ui screenshot --title 变量表 --restore-offscreen --out <tmp-dir>\variables.png --format json
 ```
 
-截图命令使用 Win32 `PrintWindow`。目标窗口最小化时使用 `--restore-offscreen`：CLI 会按当前虚拟屏幕边界把 AutoShop 临时恢复到右下角几乎屏幕外，截图后恢复原窗口位置；若原来是最小化，则先隐藏、再不激活显示并立即移到离屏位置，完成后恢复最小化状态。CLI 会返回 `contentRatio`；整窗截图低内容时会重试，仍疑似白客户区时自动尝试 client-only fallback，成功时 JSON 中 `method=PrintWindowClientFallback`、`clientOnly=true` 并带 `warnings`。`nonBlank` 和 `uniqueProbe` 只作为辅助探针，不能单独作为截图有效依据。
+截图命令使用 Win32 `PrintWindow`。目标窗口最小化时使用 `--restore-offscreen`：CLI 会按当前虚拟屏幕边界把 AutoShop 临时恢复到右下角屏幕外，截图后恢复原窗口状态；若原来是最小化，则先隐藏窗口、写入离屏 normal placement，再不激活显示并确认离屏位置，完成后恢复最小化状态。CLI 会返回 `contentRatio`；整窗截图低内容时会重试，仍疑似白客户区时自动尝试 client-only fallback，成功时 JSON 中 `method=PrintWindowClientFallback`、`clientOnly=true` 并带 `warnings`。`nonBlank` 和 `uniqueProbe` 只作为辅助探针，不能单独作为截图有效依据。
 
