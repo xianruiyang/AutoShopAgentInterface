@@ -1,16 +1,16 @@
 # AutoShop Agent CLI
 
-`AutoShopAgentInterface` 是未安装的 Codex skill 包，最终 CLI 可执行文件作为 skill 资源放在：
+`AutoShopAgentInterface` 是 Codex skill 发布包，CLI 可执行文件作为 skill 资源放在：
 
 ```text
 scripts\autoshop-agent.exe
 ```
 
-源码、开发知识文档和样例配置放在单独的开发仓库中；本仓库只保留可分发的 skill 资源、CLI 可执行文件和必要 reference 文档。
+本包只包含运行所需 CLI、skill 说明和 reference 文档。维护时从开发源同步到发布包，再同步到 Codex 已安装 skill；不要在发布包或已安装目录直接反向开发。
 
-## Skill 同步顺序
+## Skill 包使用
 
-本仓库是未安装的可分发 skill 包，不是源码开发仓库。修改 skill 说明、reference、CLI 能力或同步规则时，应先在开发源更新源码、`knowledge/`、README 和运行记录；再同步到本发布包 `<package-dir>`；最后同步到 Codex 已安装目录 `<installed-skill-dir>`。不要把已安装 skill 当成源头直接反向开发。
+示例命令中的 `<package-dir>` 表示当前 skill 包根目录，`<project-dir>`、`<workspace-dir>`、`<tmp-dir>` 等由调用者按实际工程提供。
 
 当前 EtherCAT/IS620N 从站模板的源文件是：
 
@@ -266,5 +266,5 @@ EtherCAT/EtherNet/IP 从站新增时，JSON 面向用户的字段使用 AutoShop
 <package-dir>\scripts\autoshop-agent.exe ui screenshot --title 变量表 --restore-offscreen --out <tmp-dir>\variables.png --format json
 ```
 
-截图命令使用 Win32 `PrintWindow`。目标窗口最小化时使用 `--restore-offscreen`：CLI 会按当前虚拟屏幕边界把 AutoShop 临时恢复到右下角屏幕外，截图后恢复原窗口状态；若原来是最小化，则先隐藏窗口、写入离屏 normal placement，再不激活显示并确认离屏位置，完成后恢复最小化状态。CLI 会返回 `contentRatio`；整窗截图低内容时会重试，仍疑似白客户区时自动尝试 client-only fallback，成功时 JSON 中 `method=PrintWindowClientFallback`、`clientOnly=true` 并带 `warnings`。`nonBlank` 和 `uniqueProbe` 只作为辅助探针，不能单独作为截图有效依据。
+截图命令使用 Win32 `PrintWindow`。目标窗口最小化时使用 `--restore-offscreen`：CLI 会按当前虚拟屏幕边界把 AutoShop 临时恢复到右下角屏幕外，截图后恢复原窗口状态；若原来是最小化，则先隐藏窗口、写入离屏 normal placement，再不激活显示并确认离屏位置；如果 MFC 窗口仍保持最小化，会在 normal placement 已经离屏后执行 `SW_RESTORE` 兜底并再次确认离屏位置，完成后恢复最小化状态。CLI 会返回 `contentRatio`；整窗截图低内容时会重试，仍疑似白客户区时自动尝试 client-only fallback，成功时 JSON 中 `method=PrintWindowClientFallback`、`clientOnly=true` 并带 `warnings`。`nonBlank` 和 `uniqueProbe` 只作为辅助探针，不能单独作为截图有效依据。
 

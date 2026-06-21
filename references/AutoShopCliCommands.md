@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.145`。
+适用版本：`autoshop-agent.exe v0.8.146`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -846,7 +846,7 @@ autoshop-agent.exe ui dev-key --hwnd 0x1234 --keys "down,enter" [--format json]
 autoshop-agent.exe ui dev-h5u-tag-connection --row <n> [--inspect-only] [--input-connection-type multicast|point-to-point] [--out <dir>] [--timeout-ms 15000] [--format json]
 ```
 
-后台窗口保护会用 `SM_XVIRTUALSCREEN/SM_YVIRTUALSCREEN/SM_CXVIRTUALSCREEN/SM_CYVIRTUALSCREEN` 读取当前虚拟屏幕边界，按右下角外侧计算临时位置，因此兼容不同分辨率、缩放布局和带负坐标的多显示器。`--offscreen-visible` 大于 0 时会在屏幕边缘保留对应像素用于诊断；默认 `0` 表示完全离屏。操作结束后使用启动前保存的 `WINDOWPLACEMENT` 恢复 AutoShop 的原恢复矩形；若原来是最小化，会先隐藏窗口、写入离屏 normal placement，再不激活显示并确认离屏位置，结束后恢复最小化状态，避免用户从任务栏重新打开时窗口留在屏幕外；如果 AutoShop 截图期间抢到前台，会同样使用最小化兜底保护用户前台窗口。`ui screenshot` 会计算 `contentRatio`，低内容整窗截图会重试；若仍疑似白客户区，会尝试 client-only fallback，成功时 JSON 返回 `method=PrintWindowClientFallback`、`clientOnly=true` 和 `warnings`。`nonBlank`/`uniqueProbe` 只能作为辅助探针，标题栏也可能让白客户区截图显示为非空。
+后台窗口保护会用 `SM_XVIRTUALSCREEN/SM_YVIRTUALSCREEN/SM_CXVIRTUALSCREEN/SM_CYVIRTUALSCREEN` 读取当前虚拟屏幕边界，按右下角外侧计算临时位置，因此兼容不同分辨率、缩放布局和带负坐标的多显示器。`--offscreen-visible` 大于 0 时会在屏幕边缘保留对应像素用于诊断；默认 `0` 表示完全离屏。操作结束后使用启动前保存的 `WINDOWPLACEMENT` 恢复 AutoShop 的原恢复矩形；若原来是最小化，会先隐藏窗口、写入离屏 normal placement，再不激活显示并确认离屏位置；若 MFC 窗口仍保持最小化，则在 normal placement 已经离屏后执行 `SW_RESTORE` 兜底，随后再次确认离屏位置，结束后恢复最小化状态，避免用户从任务栏重新打开时窗口留在屏幕外；如果 AutoShop 截图期间抢到前台，会同样使用最小化兜底保护用户前台窗口。`ui screenshot` 会计算 `contentRatio`，低内容整窗截图会重试；若仍疑似白客户区，会尝试 client-only fallback，成功时 JSON 返回 `method=PrintWindowClientFallback`、`clientOnly=true` 和 `warnings`。`nonBlank`/`uniqueProbe` 只能作为辅助探针，标题栏也可能让白客户区截图显示为非空。
 
 `ui open-path --title` 用于打开工程树中的 MDI 子窗口；`ui open-path --top-title` 用于打开 CANLink、CANopen、H5U 参数等同进程顶层配置窗口，JSON 会返回该顶层窗口的 `handle`，后续可传给 `ui dev-inspect-window --hwnd` 或 `ui screenshot --hwnd` 采样。`ui compile` 对应 AutoShop 的 `Ctrl+F7` 编译按钮，`ui compile-all` 对应 `F7` 全部编译，`ui run` 对应 `F5` 运行，`ui stop` 对应 `F6` 停止，`ui download` 对应 `F8` 下载，`ui upload` 对应 `F9` 上载，`ui monitor` 对应 `F3` 监控。它们在后台窗口保护内通过 AutoShop 主窗口句柄发送 `WM_COMMAND`，不会使用全局键盘、全局鼠标或剪贴板。JSON 返回包含 `commandId`、`shortcut`、`output`、`outputChanged` 和 `dialogs`；其中 `output` 来自下方“信息输出窗口”的 ListBox，`dialogs` 会采集本次命令新弹出的 AutoShop 模态提示文本和按钮。`--lines errors` 是默认值，只返回错误行；需要完整读取编译过程、时间戳和普通状态行时使用 `--lines all`。`--tail` 限制过滤后返回的末尾行数，`0` 表示全部；JSON 中 `output.count` 是控件总行数，`output.returnedCount` 是本次实际返回行数。`--dismiss-dialog=true` 会读取并自动确认 AutoShop 的连接状态类 `确定` 弹窗；`ui monitor` / `ui run` / `ui stop` 会优先处理这类弹窗，避免循环调用时堆积大量模态窗口。`ui download --yes` 会确认 AutoShop 的下载设置和下载过程提示，并返回 `confirmedDialogs`；如果遇到下载后是否运行 PLC 的提示，默认选择不运行，只有显式 `--run-after` 才会同意运行。`ui upload` 只触发并采集上载弹窗/输出，不自动确认可能改写当前 AutoShop 会话的上载流程。若需要人工保留弹窗可设为 `false`。
 

@@ -45,7 +45,7 @@ AutoShop 已打开的 ST/POU 编辑器会把内容保留在内存中。外部写
 
 `ui screenshot` 使用 Win32 `PrintWindow(hwnd, hdc, flags)` 将 AutoShop 主窗口或已打开的 MDI 子窗口绘制到内存位图，再保存为 PNG。截图默认也使用后台窗口保护，`--restore-offscreen` 仅作为兼容参数保留。CLI 会计算 `contentRatio`，当整窗截图疑似只有标题栏/白客户区时自动重试；如果重试后仍低内容，会尝试 client-only fallback，成功时 JSON 返回 `method=PrintWindowClientFallback`、`clientOnly=true` 并写入 `warnings`。
 
-CLI 会保存顶层窗口 `WINDOWPLACEMENT`，按当前虚拟屏幕边界把窗口临时移动到右下角完全屏幕外，截图后恢复原窗口位置；若原来是最小化，会先隐藏窗口、写入离屏 normal placement，再不激活显示并确认离屏位置，结束后恢复最小化状态。`--offscreen-visible 0` 表示完全离屏；设置为正数时只用于诊断边缘可见像素。
+CLI 会保存顶层窗口 `WINDOWPLACEMENT`，按当前虚拟屏幕边界把窗口临时移动到右下角完全屏幕外，截图后恢复原窗口位置；若原来是最小化，会先隐藏窗口、写入离屏 normal placement，再不激活显示并确认离屏位置；如果 AutoShop/MFC 仍保持最小化，会在 normal placement 已经离屏后执行 `SW_RESTORE` 兜底并再次确认离屏位置，结束后恢复最小化状态。`--offscreen-visible 0` 表示完全离屏；设置为正数时只用于诊断边缘可见像素。
 
 限制：
 

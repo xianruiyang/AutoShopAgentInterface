@@ -1,3 +1,9 @@
+## 2026-06-21 offscreen screenshot minimized fallback sync 0.8.146
+
+- 发布包和已安装 skill 的 `scripts/autoshop-agent.exe` 已同步到 `0.8.146`。
+- `README.md`、`references/AutoShopCliCommands.md`、`references/AutoShopUiRefresh.md` 已同步最小化窗口离屏截图说明：先写离屏 normal placement，若窗口仍是 iconic，再在离屏状态下用 `SW_RESTORE` 兜底并恢复原最小化状态。
+- `quick_validate.py --expect-version 0.8.146 --json` 已对发布包和已安装 skill 通过，隐私扫描无本机路径命中。
+
 ## 2026-06-21 CANopen value field presence sync 0.8.145
 
 - 发布包和已安装 skill 的 `scripts/autoshop-agent.exe` 已同步到 `0.8.145`。
