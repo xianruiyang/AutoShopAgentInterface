@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.144`。
+适用版本：`autoshop-agent.exe v0.8.145`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -493,6 +493,8 @@ AutoShop 手动保存可能保留旧的 `encoderModeLegacy` compilerRecord。语
 | `canOpen.jsonCreateSupported` / `canOpen.dataConfig.jsonWriteSupported` | `jsonCreateSupported=false`；存在 `canopen.data` 时 `dataConfig.jsonWriteSupported=true`，允许修改既有 objectTable 值、`slaves[].general.producerHeartbeatTimeMs`、既有 RxPDO/TxPDO 摘要、既有 `sdoInit[]` 行值，或既有 I/O Mapping D 起始地址并重算 CRC。`semanticWriteSupport` 会列出顶层和从站 alias 的 I/O Mapping D 起始地址入口。仍不允许从 EDS 或 JSON 直接生成/新增真实 CANopen 从站、PDO、SDO 行、I/O Mapping。 |
 
 `canOpen.catalog` 只解决 EDS 目录可见性和对象字典核对，不是生成入口。`canOpen.dataConfig.objectTable[]` 已支持既有对象值窄范围写回；例如 `0x1017:0` 心跳生产时间会同步 record 2 对象表、record 3 运行镜像和启用标志，并重算 CRC。`canOpen.dataConfig.slaves[].general.producerHeartbeatTimeMs` 是同一字段的从站 General 页 alias，已用 `[1]IS620_V056` 样本验证 export/edit/apply/re-export。`canOpen.dataConfig.slaves[].rxPdos[]` / `txPdos[]` 是 objectTable 的 PDO 语义视图，可修改既有 PDO 的 `enabled`、`cobId`、`transmissionType`、`eventTimeMs` 和现有映射对象值；PDO 数量或映射数量变化会被拒绝。`canOpen.dataConfig.slaves[].sdoInit[]` 是 AutoShop `服务数据对象` 页的既有行 alias，可修改既有行 `valueUnsigned`、`dataHex` 或 `rawValueHex`，并同步到底层 objectTable；行数变化和下载列标记变化会被拒绝。`canOpen.dataConfig.ioMappings[]` 和 `slaves[].ioMappings[]` 指向同一 record 5 映射，已在 `[1]IS620_V056` 样本上验证把 `D7000` 改为 `D7010` 后 re-export 回读 `D7010...D7013`、从站 alias 同步、CRC 有效；如果顶层和从站 alias 对同一映射写入不同 D 起始地址会被拒绝。当前 `workspace apply` 仍会拒绝直接添加 `canOpen.slaves`，也不会根据 catalog 伪造 `CANopen` 配置文件。
+
+CANopen 数值/布尔可写字段按 JSON 字段存在性判断是否编辑：删除 `valueUnsigned`、`enabled`、`transmissionType`、`eventTimeMs` 等字段表示“不修改该值”；显式写 `0` 或 `false` 才会应用为 0/false。`dataHex` 和 `rawValueHex` 仍优先作为精确字节编辑入口。
 
 AutoShop 4.10 保存从站后会生成 `canopen.data`；当前样本确认其为 `NOC` header + `E3/E4` records + 大端 `CRC16/MODBUS` 尾校验。CLI 已将 `canopen.data` / `canopen.up` 注册到 CAN 配置节点；若工程中实际存在，`workspace export` 会把它们作为 `files[]` 原始成员导出，`workspace apply` 可按 `contentHex` / `contentBase64` 保真回写。未采样的主站深层参数、非空 SDO 初始化、I/O Mapping 新增删除、General 其它字段与 PDO 新增删除仍不能手写生成；已采样验证的既有 objectTable 值、General 生产心跳 alias、既有 PDO 摘要字段和既有 I/O Mapping D 起始地址可通过 `canOpen.dataConfig` 修改。
 

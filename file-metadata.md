@@ -1,3 +1,9 @@
+## 2026-06-21 CANopen value field presence sync 0.8.145
+
+- 发布包和已安装 skill 的 `scripts/autoshop-agent.exe` 已同步到 `0.8.145`。
+- `README.md`、`references/AutoShopCliCommands.md`、`references/AutoShopWorkspaceJsonReference.md` 已同步 CANopen 数值/布尔字段存在性语义：字段省略表示 no-op，显式 `0` 或 `false` 才写入。
+- `quick_validate.py --expect-version 0.8.145 --json` 对发布包和已安装 skill 均通过，隐私扫描无本机路径命中。
+
 ## 2026-06-21 CANopen SDO Init/service-data-object alias sync 0.8.144
 
 - 发布包和已安装 skill 的 `scripts/autoshop-agent.exe` 已同步到 `0.8.144`。
@@ -42,7 +48,7 @@
 - `.editorconfig`: Text-file encoding policy for this distributable package when opened directly; declares UTF-8 for Markdown, JSON, PowerShell, ST, and related text files.
 - `.vscode/settings.json`: VSCode workspace setting forcing `files.encoding=utf8` and disabling encoding auto-guessing when this package folder is opened directly.
 - `SKILL.md`: Codex skill instructions and operational rules for the bundled CLI.
-- `scripts/autoshop-agent.exe`: Packaged CLI binary, currently `v0.8.144`.
+- `scripts/autoshop-agent.exe`: Packaged CLI binary, currently `v0.8.145`.
 - `quick_validate.py`: Package validation helper for required files, CLI version, and path/privacy scans.
 - `references/`: Detailed command, format, UI refresh, testing, EtherCAT slave template references, motion-axis `outputDevice` JSON binding, CANLink `programConfig` editing including existing slave station-number migration and sampled send/receive add-edit-delete, explicit CANLink `slaves` omission/add-delete boundary, dynamic CANopen workspace path, raw `canopen.data` / `canopen.up` preservation, CANopen EDS catalog export, writable existing CANopen `dataConfig.objectTable`/`slaves[].general.producerHeartbeatTimeMs`/PDO summary values, writable existing CANopen `slaves[].sdoInit` service-data-object alias values, and writable existing CANopen `dataConfig.ioMappings[].startRegister` values.
 - `references/AutoShopEthercatSlaveTemplates.md`: Reusable JSON template reference for EtherCAT `templateKey` clone, `toolboxName` device-library add, current verified `IS620N_ECAT_v2.6.8`, and `Axis_0` binding parameters.
