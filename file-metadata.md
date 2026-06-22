@@ -1,3 +1,8 @@
+## 2026-06-23 CANopen 从站页签式 JSON 编辑入口 0.8.154
+
+- `scripts/autoshop-agent.exe`：更新到 `0.8.154`，支持 CANopen `slaves[].pages[]` 页签式 JSON 导出与可写字段投影。
+- `references/AutoShopCliCommands.md`：同步 CANopen 从站节点、接收PDO、发送PDO、服务数据对象、I/O映射、调试、设备信息页的 JSON 入口和只读边界。
+- `device-library/canopen/**`：沿用 15 个右侧 CANopen 设备模板；本轮验证这些模板导出的 16 从站样本均具有 7 个页签，且可通过页签字段批量写回心跳值。
 ## 2026-06-22 CANopen right-side device-library sync 0.8.153
 
 - `scripts/autoshop-agent.exe`：同步开发版 `0.8.153`。
