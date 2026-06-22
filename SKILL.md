@@ -64,6 +64,7 @@ Always load the relevant reference before editing:
 - AutoShop UI refresh and screenshot details: `references/AutoShopUiRefresh.md`
 - Skill packaging path/privacy rules: `references/AutoShopSkillPathPolicy.md`
 - EtherCAT/IS620N slave templates and motion-axis binding: `references/AutoShopEthercatSlaveTemplates.md`
+- Device template collection status, including CANopen right-side device template coverage: `references/DeviceTemplateCollectionStatus.md`
 - H5U quick configuration guide: `references/AutoShopH5uQuickReference.md`
 - Full AutoShop H5U/Easy programming manual: `references/AutoShopH5uEasyProgrammingApplicationManual.md`
 - Full H5U PLC instruction manual: `references/AutoShopH5uPlcInstructionManualCn.md`

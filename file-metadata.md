@@ -1,3 +1,10 @@
+## 2026-06-22 CANopen 右侧设备模板库入口 0.8.152
+
+- `scripts/autoshop-agent.exe`：同步开发版 `0.8.152`，支持 CANopen 当前工程模板或 `deviceLibraryPath/canopen` 真实模板新增/删除从站，并保持缺真实模板时拒绝纯 EDS 生成。
+- `README.md`、`SKILL.md`、`references/AutoShopCliCommands.md`、`references/AutoShopWorkspaceJsonReference.md`：同步 CANopen `toolboxName` / `catalogKey` 模板新增、`templateAvailable` 和模板库边界说明。
+- `references/DeviceTemplateCollectionStatus.md`：新增发布参考，记录 EtherCAT、EtherNet/IP、CANopen 设备模板采集状态；明确 CANopen 右侧 14 个设备尚未正式采集入库。
+- `quick_validate.py`：新增 `references/DeviceTemplateCollectionStatus.md` 必需文件检查；release/installed `--expect-version 0.8.152 --json` 均通过且无隐私命中。
+
 ## 2026-06-22 CANopen template slave add/delete sync 0.8.151
 
 - `scripts/autoshop-agent.exe` is synced to `0.8.151`; exe SHA256 is `F9187C59C4468CE57C262800E18FD9C9AD524B64A85B2AA228A502588F925DFA`.

@@ -23,6 +23,7 @@ REQUIRED_FILES = [
     "references/AutoShopUiRefresh.md",
     "references/AutoShopSkillPathPolicy.md",
     "references/AutoShopEthercatSlaveTemplates.md",
+    "references/DeviceTemplateCollectionStatus.md",
     "references/AutoShopH5uQuickReference.md",
     "references/AutoShopH5uEasyProgrammingApplicationManual.md",
     "references/AutoShopH5uPlcInstructionManualCn.md",
