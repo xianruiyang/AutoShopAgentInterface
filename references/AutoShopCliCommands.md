@@ -1,6 +1,6 @@
 # AutoShop Agent CLI 指令文档
 
-适用版本：`autoshop-agent.exe v0.8.152`。
+适用版本：`autoshop-agent.exe v0.8.153`。
 
 本文是当前 CLI 的使用文档，只记录已经存在的指令、推荐工作流、JSON 映射和能力边界，不记录开发计划。正常工程内容编辑统一走 `workspace export` / `workspace apply`，不要为变量、结构体、FB/FC、模块参数等再绕开 workspace 增加零散编辑指令。
 
@@ -858,7 +858,12 @@ autoshop-agent.exe ui screenshot --title 变量表 --out var-table.png [--offscr
 autoshop-agent.exe ui screenshot --hwnd 0x1234 --out window.png [--allow-minimized] [--format json]
 autoshop-agent.exe ui dev-audit-pages --pid <pid> --path "配置/EtherCAT/GR10_0808ETNE" --preset ethercat --out <dir> [--format json]
 autoshop-agent.exe ui dev-audit-pages --pid <pid> --path "配置/EtherCAT/GS20-ECT-8L" --pages "common=110,28;process=110,76;startup=110,126;slot=110,174;io=110,224;info=110,272;status=110,320" --out <dir> [--format json]
-autoshop-agent.exe ui dev-clicks --hwnd 0x1234 --clicks "row=45,42" [--double] [--post] [--direct] [--format json]
+autoshop-agent.exe ui dev-tree-read --title CANOpen配置 --tree-index 1 [--format json]
+autoshop-agent.exe ui dev-tree-read --hwnd 0x1234 [--format json]
+autoshop-agent.exe ui dev-tree-click --title CANOpen配置 --tree-index 1 --path "CANopen设备列表/Inovance/H5U PLC" [--double] [--real-mouse] [--format json]
+autoshop-agent.exe ui dev-clicks --hwnd 0x1234 --clicks "row=45,42" [--double] [--post] [--real-mouse] [--direct] [--format json]
+autoshop-agent.exe ui dev-drag --title CANOpen配置 --from 1056,86 --to 520,260 [--real-mouse] [--out canopen-after-drag.png] [--format json]
+autoshop-agent.exe ui dev-command --id 57603 [--hwnd 0x1234] [--wait-ms 500] [--format json]
 autoshop-agent.exe ui dev-button-click --hwnd 0x1234 [--timeout-ms 5000] [--format json]
 autoshop-agent.exe ui dev-key --hwnd 0x1234 --keys "down,enter" [--format json]
 autoshop-agent.exe ui dev-h5u-tag-connection --row <n> [--inspect-only] [--input-connection-type multicast|point-to-point] [--out <dir>] [--timeout-ms 15000] [--format json]
@@ -875,6 +880,12 @@ autoshop-agent.exe ui dev-h5u-tag-connection --row <n> [--inspect-only] [--input
 `ui dev-h5u-tag-connection` 是开发期采样命令，只用于研究 AutoShop H5U 普通连接/标签连接编辑子对话框，不进入生产编辑流程。正式内容修改仍必须优先改 workspace JSON 并执行 `workspace apply`。该开发命令同样复用后台窗口保护，并在打开“编辑连接”对话框、组合框下拉窗口等关联顶层窗口时立即移动到离屏位置，避免子框短暂出现在用户当前桌面。传入 `--out` 时会离屏保存编辑子框、内容子窗口和输入连接类型下拉框截图，并在 JSON 输出中附带子控件枚举结果。传入 `--inspect-only` 时只打开、截图、枚举并确认关闭子框，不修改下拉字段。
 
 `ui dev-button-click` 是开发期采样命令，对指定按钮窗口句柄发送 `BM_CLICK` 并用超时保护等待返回，适合处理 AutoShop 模态提示中的“确定/是/完成”等标准按钮。它只用于验证/采样，不作为生产工程编辑入口。
+
+`ui dev-tree-read` 是开发期通用 `SysTreeView32` 读取命令，会直接从目标进程读取树节点文本、路径、item handle、节点矩形和当前选中项。`--title` 读取指定 MDI 窗口下的树控件；同一窗口有多个树时必须传 `--tree-index`，索引按可见树控件从左到右排序。`ui dev-tree-click` 会按树路径定位节点并用节点矩形点击或双击，可选 `--real-mouse` 用真实鼠标输入。两者只用于验证/采样，不作为生产工程编辑入口。
+
+`ui dev-command` 是开发期 `WM_COMMAND` 投递命令，默认发给 AutoShop 主窗口，也可用 `--hwnd` 指定目标窗口。命令异步投递，适合采样标准菜单/工具栏命令号（例如 MFC `ID_FILE_SAVE=57603`）是否触发 AutoShop 行为，不作为生产工程编辑入口。
+
+`ui dev-drag` 是开发期采样命令，用于研究 AutoShop 自绘组态界面拖放行为。默认以窗口消息投递方式拖动；`--real-mouse` 会临时把 AutoShop 放到当前屏幕可见位置，用真实鼠标从 MDI 窗口相对坐标拖到目标坐标，结束后恢复窗口位置和前台窗口。它只允许用于验证副本和采样，不作为生产工程编辑入口。
 
 `ui dev-audit-pages` 是开发期页面截图审查命令，只用于验证/采样，不进入生产编辑流程。命令会离屏打开指定工程树路径，按 `--preset` 或 `--pages name=x,y;...` 点击左侧页面导航并截图；截图文件名包含页序号，例如 `SV820N_1-01-common.png`，即使中文页面名被文件名清洗为 `window` 也不会覆盖同一从站的其它页面。正式内容修改仍必须通过 workspace JSON 完成。
 

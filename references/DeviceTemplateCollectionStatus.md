@@ -2,7 +2,7 @@
 
 ## 1. 生成信息
 
-- 更新时间：2026-06-01。
+- 更新时间：2026-06-22。
 - 目标工程：`<project-dir>`。
 - 固定映射目录：`<workspace-dir>`。
 - 设备模板库：`<device-library-dir>`。
@@ -28,10 +28,11 @@
 | --- | ---: | ---: | ---: | ---: | --- |
 | EtherCAT | 32 | 36 | 32 | 2 | 32 个工具箱叶子型号均已采集；分支器为父子组合模板。 |
 | EtherNet/IP | 4 | 4 | 4 | 4 | `EIP_Card`、`Easy`、`H5U`、`Generic_EtherNet_IP_device` 均已采集；Generic 为 AutoShop 内置通用设备，当前以 private-only 记录保真。 |
-| CANopen | 14 | 17 | 0 | 1 | 右侧截图可见 14 个 Inovance CANopen 工具箱叶子；CLI 从 `sys/eds` 可解析 17 个 EDS 条目。正式 `device-library/canopen` 模板尚未采集入库；当前工程样本为 IS620/`canopen.data`，临时验证模板未纳入正式库。 |
+| CANopen | 15 | 17 | 15 | 1 | 右侧 Inovance CANopen 工具箱叶子已全部采集为正式 `device-library/canopen` 模板；CLI 从 `sys/eds` 可解析 17 个 EDS 条目。 |
 
 - EtherCAT 模板索引 SHA256：`C42D5AED66CDD6BC95BA93F86498A83F18CC3CAABEF97AE9D2E6EE820F61F660`。
 - EtherNet/IP 模板索引 SHA256：`7B48D7692F87C69E8D12726CE54A226668BE9B1FEB49E0183506D20136D7FB05`。
+- CANopen 模板索引 SHA256：`332653E23C3CA0696BEA398209500CAC5A344669B965FCB7AD159C7ED6019427`。
 - EtherNet/IP 采集发现：普通 EDS 设备在 `ethernetIP.devices` 中有 primary `records` 和私有 `privateRecords`；`Generic_EtherNet_IP_device` 是 private-only 设备，会出现在 `ethernetIP.devices`，但不会生成 primary device records。
 - EtherNet/IP 开发期 reset 必须使用干净 EIP 基线并同步 `.hcpp` 里的 `EIP.dat` 条目；仅把 JSON devices 置空还不足以阻止 AutoShop 从私有尾部/工程包快照恢复旧设备。
 
@@ -83,32 +84,35 @@
 
 ## 6. CANopen 设备库状态
 
-| # | 分组 | toolboxName | 正式采集 | 当前状态 |
-| ---: | --- | --- | --- | --- |
-| 1 | Inovance | `H5U PLC` | 否 | 仅 EDS/catalog 可见，未采集 AutoShop 保存后的真实 `canopen.data` 模板。 |
-| 2 | Inovance | `Easy PLC` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 3 | Inovance | `H3U PLC` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 4 | Inovance | `MD380/MD500_V...` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 5 | Inovance | `MD810_INV_V1.2` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 6 | Inovance | `MD810_INV_V1.5` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 7 | Inovance | `MD810_INV_V3.0` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 8 | Inovance | `MD810_REC_V2...` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 9 | Inovance | `MD810_REC_V12...` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 10 | Inovance | `MD810_REC_V13...` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 11 | Inovance | `IS620_V056` | 否 | 当前工程样本存在，可作为当前工程模板新增/删除；尚未采集入正式 `device-library/canopen`。 |
-| 12 | Inovance | `SV630C_V1.1` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 13 | Inovance | `SV660C_V1.1` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
-| 14 | Inovance | `IS810_V1.1` | 否 | 仅 EDS/catalog 可见，未采集真实模板。 |
+| # | 分组 | toolboxName | 模板路径 | 节点样本 | 正式采集 |
+| ---: | --- | --- | --- | ---: | --- |
+| 1 | Inovance | `H5U PLC` | `canopen/templates/000003B9/000E010C/00000000/H5U_PLC/default.json` | 2 | 是 |
+| 2 | Inovance | `Easy PLC` | `canopen/templates/000003B9/000E010D/00000000/Easy_PLC/default.json` | 3 | 是 |
+| 3 | Inovance | `H3U PLC` | `canopen/templates/000003B9/000E0106/00000000/H3U_PLC/default.json` | 4 | 是 |
+| 4 | Inovance | `MD380/MD500_V1.11` | `canopen/templates/000003B9/000B0107/0001000B/MD380_MD500_V1.11/default.json` | 5 | 是 |
+| 5 | Inovance | `MD380/MD500_V1.12` | `canopen/templates/000003B9/000B0107/0001000C/MD380_MD500_V1.12/default.json` | 6 | 是 |
+| 6 | Inovance | `MD810_INV_V1.2` | `canopen/templates/000003B9/000B0112/00010002/MD810_INV_V1.2/default.json` | 7 | 是 |
+| 7 | Inovance | `MD810_INV_V1.5` | `canopen/templates/000003B9/000B0112/00010005/MD810_INV_V1.5/default.json` | 8 | 是 |
+| 8 | Inovance | `MD810 INV_V3.0` | `canopen/templates/000003B9/000B0112/00030000/MD810_INV_V3.0/default.json` | 9 | 是 |
+| 9 | Inovance | `MD810_REC_VC.2` | `canopen/templates/000003B9/000B0112/000C0002/MD810_REC_VC.2/default.json` | 10 | 是 |
+| 10 | Inovance | `MD810_REC_V12.4` | `canopen/templates/000003B9/000B0112/000C0004/MD810_REC_V12.4/default.json` | 11 | 是 |
+| 11 | Inovance | `MD810_REC_V13.0` | `canopen/templates/000003B9/000B0112/000D0000/MD810_REC_V13.0/default.json` | 12 | 是 |
+| 12 | Inovance | `IS620_V056` | `canopen/templates/000003B9/000D0107/19203800/IS620_V056/default.json` | 13 | 是 |
+| 13 | Inovance | `SV630C_V1.1` | `canopen/templates/000003B9/000D030C/00020001/SV630C_V1.1/default.json` | 14 | 是 |
+| 14 | Inovance | `SV660C_V1.1` | `canopen/templates/000003B9/000D010C/00020001/SV660C_V1.1/default.json` | 15 | 是 |
+| 15 | Inovance | `IS810_V1.1` | `canopen/templates/000003B9/000D0107/01920016/IS810_V1.1/default.json` | 16 | 是 |
 
-- 本轮已新增 CANopen 外部模板库机制：当 `deviceLibraryPath/canopen/index.json` 提供 AutoShop 实际保存的 `canopen.data` 模板时，`workspace apply` 可通过 `toolboxName` / `catalogKey` 新增右侧设备库中的对应设备，并继续支持删除和既有参数编辑。
-- 不能把 EDS 当成完整模板。公开 CANopen 资料也把 EDS 定义为电子数据表/对象字典描述，AutoShop 工程内 record 2/3/4/5、PDO/I/O 映射起始 D 和私有默认值必须以实际保存样本为准。
-- 右侧设备自动采样尝试记录：双击右侧设备树只选中未新增；选中后点击总线触发 AutoShop 弹窗“遇到不适当的参数。”，因此当前 CLI/Win32 路径未能可靠批量采集 14 个右侧真实模板。
+- CANopen 模板来自 AutoShop V4.10 右侧设备树真实新增后的 `canopen.data`，通过 `ui dev-tree-read/dev-tree-click` 直接读取/操作 `SysTreeView32` 控件采样，使用 `ID_FILE_SAVE=57603` 落盘。
+- 验证副本中按右侧列表新增 15 个设备后，`workspace export` 回读 16 个从站；随后用正式 `device-library/canopen` 从干净单 IS620 工程一次性新增全部右侧设备，导出回读 16 个从站。
+- 参数编辑验证：对 16 个从站分别写入 `general.producerHeartbeatTimeMs=401..416`，重新导出全部逐项回读一致。
+- 删除验证：从 16 个从站删除 node 2..16，重新导出回到单 node 1。
+- 仍不能把 EDS 当成完整模板。公开 CANopen 资料也把 EDS 定义为电子数据表/对象字典描述，AutoShop 工程内 record 2/3/4/5、PDO/I/O 映射起始 D 和私有默认值必须以实际保存样本为准。
 
 ## 7. 当前结论
 
 - EtherCAT 32 个 AutoShop UI 可见叶子型号已经全部正式采集到 `device-library/ethercat`。
 - EtherNet/IP 4 个 AutoShop UI 可见设备已经全部正式采集到 `device-library/ethernet-ip`。
-- CANopen 已支持当前工程模板和外部 `device-library/canopen` 真实模板两种新增路径；正式模板库尚无 14 个右侧设备的真实模板，不能宣称全部设备已离线内置。
+- CANopen 右侧 15 个 Inovance 工具箱设备已经全部正式采集到 `device-library/canopen`，并完成 JSON 新增、删除和 `general.producerHeartbeatTimeMs` 参数编辑回读验证。
 - CLI 已接入 EtherNet/IP 外部模板库：配置 `deviceLibraryPath` 或环境变量 `AUTOSHOP_AGENT_DEVICE_LIBRARY` 后，`workspace export` 会把库模板合并进 catalog，`workspace apply` 可从库中克隆 `EIP_Card`、`Easy`、`H5U` 的完整 `records + privateRecords`，以及 `Generic_EtherNet_IP_device` 的 private-only 记录。
 - `project001` 是持续调试工程，设备数量会随样本推进变化，不能作为模板覆盖数的静态依据；截至 2026-06-02 15:17，当前回读为 13 个 H5U 加 1 个 `Generic_EtherNet_IP_device`，Generic 为 `privateOnly=true/treeCode=14`，无重复 `treeCode`。
 - 未完成项：未做 AutoShop 前台重开工程截图验收；本轮按用户要求没有操作前台，只完成 CLI 写入、磁盘 readback、重新导出回读和幂等 dry-run。

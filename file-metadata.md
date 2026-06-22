@@ -1,3 +1,11 @@
+## 2026-06-22 CANopen right-side device-library sync 0.8.153
+
+- `scripts/autoshop-agent.exe`：同步开发版 `0.8.153`。
+- `device-library/canopen/index.json` 与 `device-library/canopen/templates/**/default.json`：新增 15 个 AutoShop 右侧 Inovance CANopen 真实模板，发布包和已安装 skill 均可自动发现。
+- `references/AutoShopCliCommands.md`：同步 `ui dev-tree-read`、`ui dev-tree-click`、`ui dev-command` 开发采样命令及 CANopen 模板新增说明。
+- `references/DeviceTemplateCollectionStatus.md`：更新 CANopen 正式采集数为 15，记录 JSON 新增、删除和 heartbeat 参数编辑回读验证。
+- 验证：release/installed `quick_validate.py --expect-version 0.8.153 --json` 通过；两侧 workspace export 均发现 15 个 CANopen `libraryTemplatePath`。
+
 ## 2026-06-22 CANopen 右侧设备模板库入口 0.8.152
 
 - `scripts/autoshop-agent.exe`：同步开发版 `0.8.152`，支持 CANopen 当前工程模板或 `deviceLibraryPath/canopen` 真实模板新增/删除从站，并保持缺真实模板时拒绝纯 EDS 生成。
