@@ -1,3 +1,10 @@
+## 2026-06-22 CANopen template slave add/delete sync 0.8.151
+
+- `scripts/autoshop-agent.exe` is synced to `0.8.151`; exe SHA256 is `F9187C59C4468CE57C262800E18FD9C9AD524B64A85B2AA228A502588F925DFA`.
+- `README.md`, `references/AutoShopCliCommands.md`, and `references/AutoShopWorkspaceJsonReference.md` now document CANopen `canOpen.dataConfig.slaves[]` template-based add/delete with optional `templateNodeId`, plus the no-template EDS/catalog generation boundary.
+- CANopen existing device parameter editing remains documented for `slaves[].general.producerHeartbeatTimeMs`, objectTable, PDO summaries, SDO Init alias values, and I/O Mapping D start registers.
+- Release and installed validation command: `quick_validate.py <root> --expect-version 0.8.151 --json`.
+
 ## 2026-06-22 CANLink station add/delete sync 0.8.150
 
 - 发布包和已安装 skill 的 `scripts/autoshop-agent.exe` 已同步到 `0.8.150`，exe SHA256 为 `D5392185755C8C568FD8C41267DCBA6CF0881C6C4FD6DE60F622802A387E417A`。
@@ -76,14 +83,14 @@
 - `.editorconfig`: Text-file encoding policy for this distributable package when opened directly; declares UTF-8 for Markdown, JSON, PowerShell, ST, and related text files.
 - `.vscode/settings.json`: VSCode workspace setting forcing `files.encoding=utf8` and disabling encoding auto-guessing when this package folder is opened directly.
 - `SKILL.md`: Codex skill instructions and operational rules for the bundled CLI.
-- `scripts/autoshop-agent.exe`: Packaged CLI binary, currently `v0.8.150`.
+- `scripts/autoshop-agent.exe`: Packaged CLI binary, currently `v0.8.151`.
 - `quick_validate.py`: Package validation helper for required files, CLI version, and path/privacy scans.
-- `references/`: Detailed command, format, UI refresh, testing, EtherCAT slave template references, motion-axis `outputDevice` JSON binding, CANLink `programConfig` editing including existing slave station-number migration, sampled send/receive add-edit-delete, writable existing `syncMappings[]` sync-write alias, CANLink `slaves[]` station add/delete for unreferenced rows with clear/referenced-delete guards, dynamic CANopen workspace path, raw `canopen.data` / `canopen.up` preservation, CANopen EDS catalog export, writable sampled CANopen `dataConfig.network` master record0 fields, writable existing CANopen `dataConfig.objectTable`/`slaves[].general.producerHeartbeatTimeMs`/PDO summary values including PDO `canId`, writable existing CANopen `slaves[].sdoInit` service-data-object alias values, writable existing CANopen `dataConfig.ioMappings[].startRegister` values, and `ui dev-clicks --direct` / `ui dev-button-click` development sampling support.
+- `references/`: Detailed command, format, UI refresh, testing, EtherCAT slave template references, motion-axis `outputDevice` JSON binding, CANLink `programConfig` editing including existing slave station-number migration, sampled send/receive add-edit-delete, writable existing `syncMappings[]` sync-write alias, CANLink `slaves[]` station add/delete for unreferenced rows with clear/referenced-delete guards, dynamic CANopen workspace path, raw `canopen.data` / `canopen.up` preservation, CANopen EDS catalog export, writable sampled CANopen `dataConfig.network` master record0 fields, writable CANopen `dataConfig.slaves[]` template add/delete, existing CANopen `dataConfig.objectTable`/`slaves[].general.producerHeartbeatTimeMs`/PDO summary values including PDO `canId`, writable existing CANopen `slaves[].sdoInit` service-data-object alias values, writable existing CANopen `dataConfig.ioMappings[].startRegister` values, and `ui dev-clicks --direct` / `ui dev-button-click` development sampling support.
 - `references/AutoShopEthercatSlaveTemplates.md`: Reusable JSON template reference for EtherCAT `templateKey` clone, `toolboxName` device-library add, current verified `IS620N_ECAT_v2.6.8`, and `Axis_0` binding parameters.
 - `references/AutoShopSkillPathPolicy.md`: Path/privacy policy for packaged skill resources and placeholders.
 - `references/AutoShopH5uQuickReference.md`: H5U AutoShop quick reference for communication, modules, EtherCAT, EtherNet/IP, and CAN(CANLink).
 - `references/AutoShopAgentWorkflow.md`: Split operational workflow reference for workspace export/apply, AutoShop UI actions, real hardware boundaries, and validation.
-- `references/AutoShopWorkspaceJsonReference.md`: Split workspace JSON reference for POU, variables, interrupts, H5U modules, EtherCAT, motion axes, EtherNet/IP, CAN(CANLink) station add/delete, CANopen catalog, writable sampled CANopen master record0 fields, writable existing CANopen objectTable/General producer heartbeat/PDO summary `canId`/SDO Init alias/I/O mapping D start register values, and remaining CANopen add-delete boundaries.
+- `references/AutoShopWorkspaceJsonReference.md`: Split workspace JSON reference for POU, variables, interrupts, H5U modules, EtherCAT, motion axes, EtherNet/IP, CAN(CANLink) station add/delete, CANopen catalog, writable sampled CANopen master record0 fields, writable existing CANopen objectTable/General producer heartbeat/PDO summary `canId`/SDO Init alias/I/O mapping D start register values, and CANopen template slave add/delete and remaining no-template/PDO/SDO/I/O Mapping add-delete boundaries.
 - `references/AutoShopH5uEasyProgrammingApplicationManual.md`: Bundled Markdown conversion of the AutoShop H5U/Easy programming and application guide.
 - `references/AutoShopH5uPlcInstructionManualCn.md`: Bundled Markdown conversion of the H5U PLC instruction manual.
 - `references/AutoShopH5uSeriesUserManualCn.md`: Bundled H5U series user manual Markdown.
